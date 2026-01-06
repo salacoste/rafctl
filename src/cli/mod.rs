@@ -1,5 +1,5 @@
 mod auth;
-mod profile;
+pub mod profile;
 mod run;
 mod status;
 

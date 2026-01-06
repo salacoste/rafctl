@@ -8,6 +8,7 @@ pub mod tools;
 use anyhow::Result;
 use clap::Parser;
 
+use crate::cli::profile::{handle_add, handle_list, handle_remove, handle_show};
 use crate::cli::{AuthAction, Cli, Commands, ProfileAction};
 
 /// Main entry point for the CLI application.
@@ -17,16 +18,16 @@ pub fn run() -> Result<()> {
     match cli.command {
         Commands::Profile { action } => match action {
             ProfileAction::Add { name, tool } => {
-                println!("Profile add: {} --tool {} (not implemented)", name, tool);
+                handle_add(&name, &tool)?;
             }
             ProfileAction::List => {
-                println!("Profile list (not implemented)");
+                handle_list()?;
             }
             ProfileAction::Remove { name } => {
-                println!("Profile remove: {} (not implemented)", name);
+                handle_remove(&name)?;
             }
             ProfileAction::Show { name } => {
-                println!("Profile show: {} (not implemented)", name);
+                handle_show(&name)?;
             }
         },
         Commands::Auth { action } => match action {
