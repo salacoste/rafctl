@@ -11,3 +11,6 @@ pub const INSTALL_URL: &str = "https://github.com/openai/codex";
 
 /// Credential file name within the config directory.
 pub const CREDENTIAL_FILE: &str = "auth.json";
+
+/// Auth command args for Codex.
+pub const AUTH_ARGS: &[&str] = &["login"];

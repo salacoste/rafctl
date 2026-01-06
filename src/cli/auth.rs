@@ -18,19 +18,37 @@ pub fn handle_login(profile_name: &str) -> Result<(), RafctlError> {
 
     let config_dir = profile.tool.config_dir_for_profile(&name_lower)?;
 
-    println!(
-        "{} Opening browser for {} authorization...",
-        "→".cyan(),
-        profile.tool
-    );
+    let auth_args = profile.tool.auth_args();
+
+    if auth_args.is_empty() {
+        // Claude auto-authenticates on first run
+        println!(
+            "{} {} authenticates automatically on first run.",
+            "ℹ".cyan(),
+            profile.tool
+        );
+        println!(
+            "{} Starting {}... Complete authentication in the browser.",
+            "→".cyan(),
+            profile.tool
+        );
+    } else {
+        println!(
+            "{} Opening browser for {} authorization...",
+            "→".cyan(),
+            profile.tool
+        );
+    }
     println!(
         "{} Waiting for authentication (Ctrl+C to cancel)...",
         "→".cyan()
     );
 
-    let status = Command::new(profile.tool.command_name())
-        .arg("auth")
-        .arg("login")
+    let mut cmd = Command::new(profile.tool.command_name());
+    for arg in auth_args {
+        cmd.arg(arg);
+    }
+    let status = cmd
         .env(profile.tool.env_var_name(), &config_dir)
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())

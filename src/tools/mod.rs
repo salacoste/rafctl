@@ -44,6 +44,13 @@ impl ToolType {
     pub fn config_dir_for_profile(&self, profile_name: &str) -> Result<PathBuf, RafctlError> {
         get_profile_dir(profile_name)
     }
+
+    pub fn auth_args(&self) -> &'static [&'static str] {
+        match self {
+            ToolType::Claude => claude::AUTH_ARGS,
+            ToolType::Codex => codex::AUTH_ARGS,
+        }
+    }
 }
 
 pub fn check_tool_available(tool: ToolType) -> Result<(), RafctlError> {
@@ -92,7 +99,15 @@ mod tests {
 
     #[test]
     fn test_credential_files() {
-        assert_eq!(ToolType::Claude.credential_file(), ".credentials.json");
+        assert_eq!(ToolType::Claude.credential_file(), ".claude.json");
         assert_eq!(ToolType::Codex.credential_file(), "auth.json");
+    }
+
+    #[test]
+    fn test_auth_args() {
+        // Claude auto-authenticates, no explicit auth command
+        assert!(ToolType::Claude.auth_args().is_empty());
+        // Codex uses "codex login"
+        assert_eq!(ToolType::Codex.auth_args(), &["login"]);
     }
 }

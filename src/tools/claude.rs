@@ -10,4 +10,8 @@ pub const COMMAND_NAME: &str = "claude";
 pub const INSTALL_URL: &str = "https://claude.ai/download";
 
 /// Credential file name within the config directory.
-pub const CREDENTIAL_FILE: &str = ".credentials.json";
+/// Claude stores auth in the main config file.
+pub const CREDENTIAL_FILE: &str = ".claude.json";
+
+/// Auth command args for Claude (empty - just run claude for auto-auth).
+pub const AUTH_ARGS: &[&str] = &[];
