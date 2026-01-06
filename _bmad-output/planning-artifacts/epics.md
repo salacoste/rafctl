@@ -832,20 +832,107 @@ So that **I can fix problems without searching documentation**.
 
 ---
 
+## Epic 9: Hardening & Polish (POST-REVIEW)
+
+**Goal:** Address findings from party mode review, improve robustness and reduce tech debt.
+
+**Source:** Party Mode Review (Epics 1-5), 2026-01-06
+**Priority:** Should complete before v1.0 release
+**Full Details:** See `_bmad-output/planning-artifacts/backlog-improvements.md`
+
+### Story 9.0: Test Isolation Infrastructure [DEV]
+
+As a **developer**,
+I want **`RAFCTL_CONFIG_DIR` environment variable to override config location**,
+So that **integration tests can run in isolation without affecting real config**.
+
+**Acceptance Criteria:**
+- `RAFCTL_CONFIG_DIR` env var overrides `~/.rafctl` location
+- All path functions respect this override
+- Tests can use `tempfile::TempDir` for full isolation
+
+**Effort:** S (1-2h)
+
+---
+
+### Story 9.1: Verify Tool CLI Interfaces [DEV] 🔴
+
+As a **developer**,
+I want **to verify the actual CLI interfaces of Claude Code and Codex CLI**,
+So that **auth login and run commands work correctly with real tools**.
+
+**Research Tasks:**
+- Check Claude Code CLI: `claude --help`, `claude auth --help`
+- Check Codex CLI documentation
+- Update auth commands if needed
+
+**Effort:** M (2-4h)
+**Risk:** 🔴 High — if wrong, auth won't work
+
+---
+
+### Story 9.2: Add Auth Login Timeout [DEV] 🟡
+
+As a **user**,
+I want **authentication to timeout after 10 minutes**,
+So that **I don't have hanging processes if I forget to complete auth**.
+
+**Effort:** S (1-2h)
+
+---
+
+### Story 9.3: Replace Regex with Simple Validation [DEV] 🟢
+
+As a **developer**,
+I want **to remove regex dependency for profile name validation**,
+So that **binary size is reduced by ~200KB**.
+
+**Effort:** S (1-2h)
+
+---
+
+### Story 9.4: Log Errors Instead of Ignoring [DEV] 🟢
+
+Replace `let _ = save_profile(...)` with proper warning logging.
+
+**Effort:** XS (<1h)
+
+---
+
+### Story 9.5: Fix Deprecated cargo_bin Warning [DEV] 🟢
+
+Update integration tests to use non-deprecated assert_cmd API.
+
+**Effort:** XS (<1h)
+
+---
+
+### Story 9.6: Integration Tests for CLI Commands [QA] 🟡
+
+Comprehensive integration tests for profile/auth/run commands.
+
+**Effort:** L (4-8h)
+**Blocked by:** Story 9.0
+
+---
+
 ## Implementation Order
 
 **Recommended sequence for MVP:**
 
-1. Epic 1 (Foundation) — Stories 1.1, 1.2
-2. Epic 2 (Profiles) — Stories 2.1, 2.2, 2.3, 2.4
-3. Epic 3 (Tools) — Stories 3.1, 3.2
-4. Epic 4 (Auth) — Stories 4.1, 4.2, 4.3
-5. Epic 5 (Execution) — Stories 5.1, 5.2
+1. Epic 1 (Foundation) — Stories 1.1, 1.2 ✅
+2. Epic 2 (Profiles) — Stories 2.1, 2.2, 2.3, 2.4 ✅
+3. Epic 3 (Tools) — Stories 3.1, 3.2 ✅
+4. Epic 4 (Auth) — Stories 4.1, 4.2, 4.3 ✅
+5. Epic 5 (Execution) — Stories 5.1, 5.2 ✅
 6. Epic 6 (Status/Config) — Stories 6.1, 6.2, 6.3
 7. Epic 7 (Output/Shell) — Stories 7.1, 7.2
 8. Epic 8 (Quality/Release) — Stories 8.1, 8.2, 8.3
+9. Epic 9 (Hardening/Polish) — Stories 9.0-9.6 (before v1.0)
 
 **Critical path:** Epic 1 → Epic 2 → Epic 3 → Epic 5 (Story 5.1) → Epic 8 (Story 8.1 isolation test)
+
+**Post-Review path:** Epic 9.1 (verify CLI) → Epic 9.0 (test infra) → Epic 9.6 (QA tests)
 
 ---
 
