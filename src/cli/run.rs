@@ -29,8 +29,12 @@ pub fn handle_run(profile_name: Option<&str>, args: &[String]) -> Result<i32, Ra
     };
 
     profile.last_used = Some(Utc::now());
-    let _ = save_profile(&profile);
-    let _ = set_last_used_profile(&name_lower);
+    if let Err(e) = save_profile(&profile) {
+        eprintln!("{} Failed to update profile: {}", "⚠".yellow(), e);
+    }
+    if let Err(e) = set_last_used_profile(&name_lower) {
+        eprintln!("{} Failed to update last used: {}", "⚠".yellow(), e);
+    }
 
     Ok(exit_code)
 }

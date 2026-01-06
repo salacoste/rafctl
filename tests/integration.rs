@@ -7,7 +7,8 @@ use tempfile::TempDir;
 /// Helper to create a rafctl command with isolated config directory
 fn rafctl_cmd(config_dir: &std::path::Path) -> Command {
     let mut cmd = cargo_bin_cmd!("rafctl");
-    cmd.env("HOME", config_dir);
+    // Use RAFCTL_CONFIG_DIR for proper isolation (better than HOME override)
+    cmd.env("RAFCTL_CONFIG_DIR", config_dir.join(".rafctl"));
     cmd
 }
 

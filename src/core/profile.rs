@@ -2,12 +2,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Utc};
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::error::RafctlError;
 
-const PROFILE_NAME_PATTERN: &str = r"^[a-zA-Z0-9_-]+$";
 const MAX_PROFILE_NAME_LENGTH: usize = 64;
 const RESERVED_NAMES: &[&str] = &["default", "config", "cache", "profiles", "oauth"];
 
@@ -127,6 +125,10 @@ impl Profile {
     }
 }
 
+fn is_valid_profile_char(c: char) -> bool {
+    c.is_ascii_alphanumeric() || c == '_' || c == '-'
+}
+
 pub fn validate_profile_name(name: &str) -> Result<(), RafctlError> {
     if name.is_empty() {
         return Err(RafctlError::InvalidProfileName(name.to_string()));
@@ -134,11 +136,9 @@ pub fn validate_profile_name(name: &str) -> Result<(), RafctlError> {
     if name.len() > MAX_PROFILE_NAME_LENGTH {
         return Err(RafctlError::InvalidProfileName(name.to_string()));
     }
-    let re = Regex::new(PROFILE_NAME_PATTERN).unwrap();
-    if !re.is_match(name) {
+    if !name.chars().all(is_valid_profile_char) {
         return Err(RafctlError::InvalidProfileName(name.to_string()));
     }
-    // Check for reserved names
     let name_lower = name.to_lowercase();
     if RESERVED_NAMES.contains(&name_lower.as_str()) {
         return Err(RafctlError::ReservedProfileName(name.to_string()));
@@ -147,6 +147,10 @@ pub fn validate_profile_name(name: &str) -> Result<(), RafctlError> {
 }
 
 pub fn get_config_dir() -> Result<PathBuf, RafctlError> {
+    // Allow override via RAFCTL_CONFIG_DIR for testing and custom installations
+    if let Ok(dir) = std::env::var("RAFCTL_CONFIG_DIR") {
+        return Ok(PathBuf::from(dir));
+    }
     let home = dirs::home_dir().ok_or(RafctlError::NoHomeDir)?;
     Ok(home.join(".rafctl"))
 }
