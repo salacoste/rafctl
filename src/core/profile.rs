@@ -9,6 +9,7 @@ use crate::error::RafctlError;
 
 const PROFILE_NAME_PATTERN: &str = r"^[a-zA-Z0-9_-]+$";
 const MAX_PROFILE_NAME_LENGTH: usize = 64;
+const RESERVED_NAMES: &[&str] = &["default", "config", "cache", "profiles", "oauth"];
 
 /// Authentication mode for Claude Code profiles
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -136,6 +137,11 @@ pub fn validate_profile_name(name: &str) -> Result<(), RafctlError> {
     let re = Regex::new(PROFILE_NAME_PATTERN).unwrap();
     if !re.is_match(name) {
         return Err(RafctlError::InvalidProfileName(name.to_string()));
+    }
+    // Check for reserved names
+    let name_lower = name.to_lowercase();
+    if RESERVED_NAMES.contains(&name_lower.as_str()) {
+        return Err(RafctlError::ReservedProfileName(name.to_string()));
     }
     Ok(())
 }
@@ -412,6 +418,16 @@ last_used: null
 
         let long_name = "a".repeat(65);
         assert!(validate_profile_name(&long_name).is_err());
+    }
+
+    #[test]
+    fn test_validate_profile_name_reserved() {
+        assert!(validate_profile_name("default").is_err());
+        assert!(validate_profile_name("Default").is_err());
+        assert!(validate_profile_name("CONFIG").is_err());
+        assert!(validate_profile_name("cache").is_err());
+        assert!(validate_profile_name("profiles").is_err());
+        assert!(validate_profile_name("oauth").is_err());
     }
 
     #[test]

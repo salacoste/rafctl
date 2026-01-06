@@ -12,6 +12,9 @@ pub enum RafctlError {
     #[error("Invalid profile name '{0}': must match [a-zA-Z0-9_-]+")]
     InvalidProfileName(String),
 
+    #[error("Reserved profile name '{0}': cannot use system names (default, config, cache)")]
+    ReservedProfileName(String),
+
     #[error("Home directory not found")]
     NoHomeDir,
 

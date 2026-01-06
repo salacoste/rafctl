@@ -1,3 +1,4 @@
+use assert_cmd::cargo::cargo_bin_cmd;
 use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs;
@@ -5,7 +6,7 @@ use tempfile::TempDir;
 
 /// Helper to create a rafctl command with isolated config directory
 fn rafctl_cmd(config_dir: &std::path::Path) -> Command {
-    let mut cmd = Command::cargo_bin("rafctl").unwrap();
+    let mut cmd = cargo_bin_cmd!("rafctl");
     cmd.env("HOME", config_dir);
     cmd
 }
@@ -15,8 +16,7 @@ mod cli_tests {
 
     #[test]
     fn test_help_shows_all_commands() {
-        Command::cargo_bin("rafctl")
-            .unwrap()
+        cargo_bin_cmd!("rafctl")
             .arg("--help")
             .assert()
             .success()
@@ -30,8 +30,7 @@ mod cli_tests {
 
     #[test]
     fn test_version() {
-        Command::cargo_bin("rafctl")
-            .unwrap()
+        cargo_bin_cmd!("rafctl")
             .arg("--version")
             .assert()
             .success()
@@ -40,8 +39,7 @@ mod cli_tests {
 
     #[test]
     fn test_profile_help() {
-        Command::cargo_bin("rafctl")
-            .unwrap()
+        cargo_bin_cmd!("rafctl")
             .args(["profile", "--help"])
             .assert()
             .success()
@@ -53,8 +51,7 @@ mod cli_tests {
 
     #[test]
     fn test_auth_help() {
-        Command::cargo_bin("rafctl")
-            .unwrap()
+        cargo_bin_cmd!("rafctl")
             .args(["auth", "--help"])
             .assert()
             .success()
@@ -66,8 +63,7 @@ mod cli_tests {
 
     #[test]
     fn test_config_help() {
-        Command::cargo_bin("rafctl")
-            .unwrap()
+        cargo_bin_cmd!("rafctl")
             .args(["config", "--help"])
             .assert()
             .success()
@@ -79,8 +75,7 @@ mod cli_tests {
 
     #[test]
     fn test_global_json_flag() {
-        Command::cargo_bin("rafctl")
-            .unwrap()
+        cargo_bin_cmd!("rafctl")
             .arg("--help")
             .assert()
             .success()
@@ -89,8 +84,7 @@ mod cli_tests {
 
     #[test]
     fn test_global_plain_flag() {
-        Command::cargo_bin("rafctl")
-            .unwrap()
+        cargo_bin_cmd!("rafctl")
             .arg("--help")
             .assert()
             .success()
@@ -522,8 +516,7 @@ mod completion_tests {
 
     #[test]
     fn test_bash_completion() {
-        Command::cargo_bin("rafctl")
-            .unwrap()
+        cargo_bin_cmd!("rafctl")
             .args(["completion", "bash"])
             .assert()
             .success()
@@ -532,8 +525,7 @@ mod completion_tests {
 
     #[test]
     fn test_zsh_completion() {
-        Command::cargo_bin("rafctl")
-            .unwrap()
+        cargo_bin_cmd!("rafctl")
             .args(["completion", "zsh"])
             .assert()
             .success()
@@ -542,8 +534,7 @@ mod completion_tests {
 
     #[test]
     fn test_fish_completion() {
-        Command::cargo_bin("rafctl")
-            .unwrap()
+        cargo_bin_cmd!("rafctl")
             .args(["completion", "fish"])
             .assert()
             .success()

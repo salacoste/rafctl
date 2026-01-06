@@ -48,6 +48,13 @@ fn main() -> ExitCode {
                         format!("  Install {}: {}", tool, install_url).dimmed()
                     );
                 }
+                rafctl::error::RafctlError::OAuthConflict => {
+                    eprintln!("{}", "  Another OAuth profile is already running.".dimmed());
+                    eprintln!(
+                        "{}",
+                        "  Close the other instance first, or use API key mode for parallel execution.".dimmed()
+                    );
+                }
                 _ => {}
             }
         } else {
