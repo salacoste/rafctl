@@ -1,7 +1,9 @@
 pub mod auth;
 pub mod config;
+pub mod dashboard;
 pub mod output;
 pub mod profile;
+pub mod quota;
 pub mod run;
 pub mod status;
 
@@ -66,6 +68,11 @@ pub enum Commands {
         #[arg(help = "Specific profile (shows all if not specified)")]
         profile: Option<String>,
     },
+    #[command(about = "Show quota/usage limits")]
+    Quota {
+        #[arg(help = "Specific profile (shows all if not specified)")]
+        profile: Option<String>,
+    },
     #[command(about = "Configuration management")]
     Config {
         #[command(subcommand)]
@@ -76,6 +83,8 @@ pub enum Commands {
         #[arg(value_enum)]
         shell: Shell,
     },
+    #[command(about = "Interactive TUI dashboard")]
+    Dashboard,
 }
 
 #[derive(Subcommand)]

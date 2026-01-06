@@ -104,6 +104,13 @@ rafctl config path              # Show config directory
 rafctl status                   # All profiles (table view)
 rafctl status <profile>         # Specific profile details
 rafctl status --json            # JSON output for scripting
+
+# Quota Monitoring
+rafctl quota                    # Show quota for all profiles
+rafctl quota <profile>          # Show quota for specific profile
+
+# TUI Dashboard
+rafctl dashboard                # Interactive profile management
 ```
 
 ## Shell Completions
@@ -208,8 +215,8 @@ These names are reserved and cannot be used: `default`, `config`, `cache`, `prof
 - [x] Shell completions
 - [x] JSON/Plain output formats
 - [x] CI/CD pipeline
-- [ ] Quota monitoring
-- [ ] TUI dashboard
+- [x] Quota monitoring
+- [x] TUI dashboard
 - [ ] Desktop app (Tauri)
 
 ## Development

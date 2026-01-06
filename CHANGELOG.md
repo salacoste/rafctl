@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-01-06
+
+### Added
+
+- **Quota Monitoring** (Epic 10)
+  - `rafctl quota` command to check Claude API usage limits
+  - Shows 5-hour and 7-day utilization windows
+  - Visual progress bars with color coding (green/yellow/red)
+  - Reset time display for each window
+  - Supports `--json` and `--plain` output formats
+  - Uses Anthropic OAuth API (`/api/oauth/usage`)
+
+- **TUI Dashboard** (Epic 11)
+  - `rafctl dashboard` command for interactive profile management
+  - Table view with all profiles, auth status, and last used time
+  - Keyboard navigation: `j/k` or arrows, `Enter/r` to run, `l` to login, `q` to quit
+  - Visual selection with highlight indicator
+  - Built with ratatui + crossterm
+
+### Dependencies
+
+- Added `ureq` for HTTP requests (quota API)
+- Added `ratatui` and `crossterm` for TUI
+
 ## [0.1.0] - 2026-01-06
 
 ### Added
@@ -55,5 +79,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cross-platform builds (Linux x86_64, macOS x86_64/aarch64)
 - Release workflow with automatic artifact creation
 
-[Unreleased]: https://github.com/salacoste/rafctl/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/salacoste/rafctl/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/salacoste/rafctl/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/salacoste/rafctl/releases/tag/v0.1.0

@@ -15,7 +15,9 @@ use crate::cli::config::{
     handle_clear_default, handle_path as handle_config_path, handle_set_default,
     handle_show as handle_config_show,
 };
+use crate::cli::dashboard::run_dashboard;
 use crate::cli::profile::{handle_add, handle_list, handle_remove, handle_show};
+use crate::cli::quota::handle_quota;
 use crate::cli::run::handle_run;
 use crate::cli::status::handle_status;
 use crate::cli::{AuthAction, Cli, Commands, ConfigAction, ProfileAction};
@@ -67,6 +69,9 @@ pub fn run() -> Result<()> {
         Commands::Status { profile } => {
             handle_status(profile.as_deref(), format)?;
         }
+        Commands::Quota { profile } => {
+            handle_quota(profile.as_deref(), format)?;
+        }
         Commands::Config { action } => match action {
             ConfigAction::Show => {
                 handle_config_show(format)?;
@@ -83,6 +88,9 @@ pub fn run() -> Result<()> {
         },
         Commands::Completion { shell } => {
             cli::generate_completions(shell);
+        }
+        Commands::Dashboard => {
+            run_dashboard()?;
         }
     }
 
