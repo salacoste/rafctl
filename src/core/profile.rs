@@ -10,6 +10,43 @@ use crate::error::RafctlError;
 const PROFILE_NAME_PATTERN: &str = r"^[a-zA-Z0-9_-]+$";
 const MAX_PROFILE_NAME_LENGTH: usize = 64;
 
+/// Authentication mode for Claude Code profiles
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum AuthMode {
+    /// OAuth-based authentication (subscription features, single instance)
+    /// Tokens stored in macOS Keychain, swapped before each launch
+    #[default]
+    OAuth,
+    /// API Key authentication (full isolation, parallel instances)
+    /// Uses ANTHROPIC_API_KEY env var
+    ApiKey,
+}
+
+impl std::fmt::Display for AuthMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AuthMode::OAuth => write!(f, "oauth"),
+            AuthMode::ApiKey => write!(f, "api-key"),
+        }
+    }
+}
+
+impl std::str::FromStr for AuthMode {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "oauth" => Ok(AuthMode::OAuth),
+            "api-key" | "apikey" | "api_key" => Ok(AuthMode::ApiKey),
+            _ => Err(format!(
+                "Invalid auth mode '{}'. Valid options: oauth, api-key",
+                s
+            )),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ToolType {
@@ -45,6 +82,14 @@ impl std::str::FromStr for ToolType {
 pub struct Profile {
     pub name: String,
     pub tool: ToolType,
+    /// Authentication mode (OAuth or API Key)
+    /// Only applicable for Claude - Codex always uses OAuth
+    #[serde(default)]
+    pub auth_mode: AuthMode,
+    /// API key for API Key mode (stored encrypted in profile)
+    /// Only used when auth_mode is ApiKey
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub api_key: Option<String>,
     pub created_at: DateTime<Utc>,
     pub last_used: Option<DateTime<Utc>>,
 }
@@ -54,9 +99,30 @@ impl Profile {
         Self {
             name,
             tool,
+            auth_mode: AuthMode::default(),
+            api_key: None,
             created_at: Utc::now(),
             last_used: None,
         }
+    }
+
+    pub fn new_with_auth(name: String, tool: ToolType, auth_mode: AuthMode) -> Self {
+        Self {
+            name,
+            tool,
+            auth_mode,
+            api_key: None,
+            created_at: Utc::now(),
+            last_used: None,
+        }
+    }
+
+    /// Check if this profile supports parallel instances
+    pub fn supports_parallel(&self) -> bool {
+        matches!(
+            (&self.tool, &self.auth_mode),
+            (ToolType::Claude, AuthMode::ApiKey) | (ToolType::Codex, _)
+        )
     }
 }
 
@@ -224,6 +290,26 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_auth_mode_serialization() {
+        let mode = AuthMode::OAuth;
+        let yaml = serde_yaml::to_string(&mode).unwrap();
+        assert_eq!(yaml.trim(), "oauth");
+
+        let mode = AuthMode::ApiKey;
+        let yaml = serde_yaml::to_string(&mode).unwrap();
+        assert_eq!(yaml.trim(), "apikey");
+    }
+
+    #[test]
+    fn test_auth_mode_from_str() {
+        assert_eq!("oauth".parse::<AuthMode>().unwrap(), AuthMode::OAuth);
+        assert_eq!("api-key".parse::<AuthMode>().unwrap(), AuthMode::ApiKey);
+        assert_eq!("apikey".parse::<AuthMode>().unwrap(), AuthMode::ApiKey);
+        assert_eq!("api_key".parse::<AuthMode>().unwrap(), AuthMode::ApiKey);
+        assert!("invalid".parse::<AuthMode>().is_err());
+    }
+
+    #[test]
     fn test_tool_type_serialization() {
         let tool = ToolType::Claude;
         let yaml = serde_yaml::to_string(&tool).unwrap();
@@ -256,7 +342,33 @@ mod tests {
         let profile = Profile::new("work".to_string(), ToolType::Claude);
         assert_eq!(profile.name, "work");
         assert_eq!(profile.tool, ToolType::Claude);
+        assert_eq!(profile.auth_mode, AuthMode::OAuth);
+        assert!(profile.api_key.is_none());
         assert!(profile.last_used.is_none());
+    }
+
+    #[test]
+    fn test_profile_creation_with_auth() {
+        let profile = Profile::new_with_auth(
+            "api-profile".to_string(),
+            ToolType::Claude,
+            AuthMode::ApiKey,
+        );
+        assert_eq!(profile.auth_mode, AuthMode::ApiKey);
+        assert!(profile.api_key.is_none());
+    }
+
+    #[test]
+    fn test_profile_supports_parallel() {
+        let oauth_claude = Profile::new("oauth".to_string(), ToolType::Claude);
+        assert!(!oauth_claude.supports_parallel());
+
+        let api_claude =
+            Profile::new_with_auth("api".to_string(), ToolType::Claude, AuthMode::ApiKey);
+        assert!(api_claude.supports_parallel());
+
+        let codex = Profile::new("codex".to_string(), ToolType::Codex);
+        assert!(codex.supports_parallel());
     }
 
     #[test]
@@ -267,6 +379,20 @@ mod tests {
 
         assert_eq!(restored.name, profile.name);
         assert_eq!(restored.tool, profile.tool);
+        assert_eq!(restored.auth_mode, profile.auth_mode);
+    }
+
+    #[test]
+    fn test_profile_backwards_compatibility() {
+        let old_yaml = r#"
+name: old-profile
+tool: claude
+created_at: 2024-01-01T00:00:00Z
+last_used: null
+"#;
+        let profile: Profile = serde_yaml::from_str(old_yaml).unwrap();
+        assert_eq!(profile.auth_mode, AuthMode::OAuth);
+        assert!(profile.api_key.is_none());
     }
 
     #[test]

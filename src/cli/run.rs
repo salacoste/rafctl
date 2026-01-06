@@ -4,7 +4,9 @@ use chrono::Utc;
 use colored::Colorize;
 
 use crate::core::config::{get_default_profile, set_last_used_profile};
-use crate::core::profile::{list_profiles, load_profile, profile_exists, save_profile};
+use crate::core::profile::{
+    list_profiles, load_profile, profile_exists, save_profile, AuthMode, Profile, ToolType,
+};
 use crate::error::RafctlError;
 use crate::tools::{check_tool_available, is_authenticated};
 
@@ -19,20 +21,89 @@ pub fn handle_run(profile_name: Option<&str>, args: &[String]) -> Result<i32, Ra
     let mut profile = load_profile(&name_lower)?;
     check_tool_available(profile.tool)?;
 
-    if !is_authenticated(profile.tool, &name_lower)? {
+    let exit_code = match (&profile.tool, &profile.auth_mode) {
+        (ToolType::Claude, AuthMode::ApiKey) => launch_with_api_key(&profile, args)?,
+        (ToolType::Claude, AuthMode::OAuth) => launch_with_oauth(&profile, args)?,
+        (ToolType::Codex, _) => launch_default(&profile, args)?,
+    };
+
+    profile.last_used = Some(Utc::now());
+    let _ = save_profile(&profile);
+    let _ = set_last_used_profile(&name_lower);
+
+    Ok(exit_code)
+}
+
+fn launch_with_api_key(profile: &Profile, args: &[String]) -> Result<i32, RafctlError> {
+    let api_key = profile
+        .api_key
+        .as_ref()
+        .ok_or_else(|| RafctlError::NoApiKey(profile.name.clone()))?;
+
+    let config_dir = profile.tool.config_dir_for_profile(&profile.name)?;
+
+    let mut cmd = Command::new(profile.tool.command_name());
+    cmd.env("ANTHROPIC_API_KEY", api_key)
+        .env(profile.tool.env_var_name(), &config_dir)
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
+
+    for arg in args {
+        cmd.arg(arg);
+    }
+
+    let status = cmd.status().map_err(|e| RafctlError::ConfigWrite {
+        path: config_dir,
+        source: e,
+    })?;
+
+    Ok(status.code().unwrap_or(1))
+}
+
+#[cfg(target_os = "macos")]
+fn launch_with_oauth(profile: &Profile, args: &[String]) -> Result<i32, RafctlError> {
+    use crate::tools::keychain;
+
+    let token = keychain::read_oauth_token(&profile.name)?
+        .ok_or_else(|| RafctlError::NotAuthenticated(profile.name.clone()))?;
+
+    keychain::swap_to_claude_keychain(&token)?;
+
+    launch_default(profile, args)
+}
+
+#[cfg(not(target_os = "macos"))]
+fn launch_with_oauth(profile: &Profile, args: &[String]) -> Result<i32, RafctlError> {
+    eprintln!(
+        "{} OAuth mode requires macOS for keychain support",
+        "✗".red()
+    );
+    eprintln!(
+        "{} Use API key mode instead: rafctl profile add {} --tool claude --auth-mode api-key",
+        "ℹ".cyan(),
+        profile.name
+    );
+    Err(RafctlError::KeychainError(
+        "OAuth mode only available on macOS".to_string(),
+    ))
+}
+
+fn launch_default(profile: &Profile, args: &[String]) -> Result<i32, RafctlError> {
+    if !is_authenticated(profile.tool, &profile.name)? {
         eprintln!(
             "{} Profile '{}' is not authenticated",
             "✗".red(),
-            name_lower
+            profile.name
         );
         eprintln!(
             "{}",
-            format!("Run: rafctl auth login {}", name_lower).dimmed()
+            format!("Run: rafctl auth login {}", profile.name).dimmed()
         );
-        return Err(RafctlError::NotAuthenticated(name_lower));
+        return Err(RafctlError::NotAuthenticated(profile.name.clone()));
     }
 
-    let config_dir = profile.tool.config_dir_for_profile(&name_lower)?;
+    let config_dir = profile.tool.config_dir_for_profile(&profile.name)?;
 
     let mut cmd = Command::new(profile.tool.command_name());
     cmd.env(profile.tool.env_var_name(), &config_dir)
@@ -48,10 +119,6 @@ pub fn handle_run(profile_name: Option<&str>, args: &[String]) -> Result<i32, Ra
         path: config_dir,
         source: e,
     })?;
-
-    profile.last_used = Some(Utc::now());
-    let _ = save_profile(&profile);
-    let _ = set_last_used_profile(&name_lower);
 
     Ok(status.code().unwrap_or(1))
 }

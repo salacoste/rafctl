@@ -1,8 +1,11 @@
+use std::io::{self, Write};
 use std::process::{Command, Stdio};
 
 use colored::Colorize;
 
-use crate::core::profile::{list_profiles, load_profile, profile_exists};
+use crate::core::profile::{
+    list_profiles, load_profile, profile_exists, save_profile, AuthMode, ToolType,
+};
 use crate::error::RafctlError;
 use crate::tools::{check_tool_available, is_authenticated};
 
@@ -176,6 +179,69 @@ pub fn handle_logout(profile_name: &str) -> Result<(), RafctlError> {
     })?;
 
     println!("{} Logged out of '{}'", "✓".green(), name_lower);
+
+    Ok(())
+}
+
+pub fn handle_set_key(profile_name: &str, api_key: Option<&str>) -> Result<(), RafctlError> {
+    let name_lower = profile_name.to_lowercase();
+
+    if !profile_exists(&name_lower)? {
+        return Err(RafctlError::ProfileNotFound(name_lower));
+    }
+
+    let mut profile = load_profile(&name_lower)?;
+
+    if profile.tool != ToolType::Claude {
+        eprintln!(
+            "{} API key mode only supported for Claude profiles",
+            "✗".red()
+        );
+        return Ok(());
+    }
+
+    if profile.auth_mode != AuthMode::ApiKey {
+        eprintln!(
+            "{} Profile '{}' is in OAuth mode. Recreate with: rafctl profile add {} --tool claude --auth-mode api-key",
+            "✗".red(),
+            name_lower,
+            name_lower
+        );
+        return Ok(());
+    }
+
+    let key = match api_key {
+        Some(k) => k.to_string(),
+        None => {
+            print!("Enter API key: ");
+            io::stdout().flush().unwrap();
+            let mut input = String::new();
+            io::stdin()
+                .read_line(&mut input)
+                .map_err(|e| RafctlError::ConfigRead {
+                    path: std::path::PathBuf::from("stdin"),
+                    source: e,
+                })?;
+            input.trim().to_string()
+        }
+    };
+
+    if key.is_empty() {
+        eprintln!("{} API key cannot be empty", "✗".red());
+        return Ok(());
+    }
+
+    if !key.starts_with("sk-ant-api") {
+        eprintln!(
+            "{} Warning: API key doesn't look like an Anthropic key (should start with 'sk-ant-api')",
+            "⚠".yellow()
+        );
+    }
+
+    profile.api_key = Some(key);
+    save_profile(&profile)?;
+
+    println!("{} API key set for profile '{}'", "✓".green(), name_lower);
 
     Ok(())
 }

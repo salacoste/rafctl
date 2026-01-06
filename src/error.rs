@@ -34,4 +34,13 @@ pub enum RafctlError {
 
     #[error("Profile '{0}' is not authenticated")]
     NotAuthenticated(String),
+
+    #[error("Keychain error: {0}")]
+    KeychainError(String),
+
+    #[error("API key not configured for profile '{0}'")]
+    NoApiKey(String),
+
+    #[error("OAuth mode conflict: another OAuth instance is already running")]
+    OAuthConflict,
 }

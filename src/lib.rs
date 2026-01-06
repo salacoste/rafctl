@@ -8,7 +8,9 @@ pub mod tools;
 use anyhow::Result;
 use clap::Parser;
 
-use crate::cli::auth::{handle_login, handle_logout, handle_status as handle_auth_status};
+use crate::cli::auth::{
+    handle_login, handle_logout, handle_set_key, handle_status as handle_auth_status,
+};
 use crate::cli::profile::{handle_add, handle_list, handle_remove, handle_show};
 use crate::cli::run::handle_run;
 use crate::cli::{AuthAction, Cli, Commands, ProfileAction};
@@ -19,8 +21,12 @@ pub fn run() -> Result<()> {
 
     match cli.command {
         Commands::Profile { action } => match action {
-            ProfileAction::Add { name, tool } => {
-                handle_add(&name, &tool)?;
+            ProfileAction::Add {
+                name,
+                tool,
+                auth_mode,
+            } => {
+                handle_add(&name, &tool, auth_mode.as_deref())?;
             }
             ProfileAction::List => {
                 handle_list()?;
@@ -41,6 +47,9 @@ pub fn run() -> Result<()> {
             }
             AuthAction::Status { profile } => {
                 handle_auth_status(profile.as_deref())?;
+            }
+            AuthAction::SetKey { profile, key } => {
+                handle_set_key(&profile, key.as_deref())?;
             }
         },
         Commands::Run { profile, args } => {

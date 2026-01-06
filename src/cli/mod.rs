@@ -52,6 +52,8 @@ pub enum ProfileAction {
         name: String,
         #[arg(long, help = "Tool type: claude or codex")]
         tool: String,
+        #[arg(long, help = "Auth mode for Claude: oauth (default) or api-key")]
+        auth_mode: Option<String>,
     },
     #[command(about = "List all profiles")]
     List,
@@ -71,6 +73,12 @@ pub enum AuthAction {
     Status {
         #[arg(help = "Profile name (shows all if not specified)")]
         profile: Option<String>,
+    },
+    #[command(about = "Set API key for a profile")]
+    SetKey {
+        profile: String,
+        #[arg(long, help = "API key (prompts if not provided)")]
+        key: Option<String>,
     },
 }
 

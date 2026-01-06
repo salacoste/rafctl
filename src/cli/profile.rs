@@ -2,11 +2,11 @@ use colored::Colorize;
 
 use crate::core::profile::{
     delete_profile, find_similar_profile, list_profiles, load_profile, profile_exists,
-    save_profile, validate_profile_name, Profile, ToolType,
+    save_profile, validate_profile_name, AuthMode, Profile, ToolType,
 };
 use crate::error::RafctlError;
 
-pub fn handle_add(name: &str, tool: &str) -> Result<(), RafctlError> {
+pub fn handle_add(name: &str, tool: &str, auth_mode: Option<&str>) -> Result<(), RafctlError> {
     validate_profile_name(name)?;
 
     let name_lower = name.to_lowercase();
@@ -19,15 +19,41 @@ pub fn handle_add(name: &str, tool: &str) -> Result<(), RafctlError> {
         .parse()
         .map_err(|e: String| RafctlError::InvalidProfileName(e))?;
 
-    let profile = Profile::new(name_lower.clone(), tool_type);
+    let auth = match auth_mode {
+        Some(mode) => mode
+            .parse::<AuthMode>()
+            .map_err(RafctlError::InvalidProfileName)?,
+        None => AuthMode::default(),
+    };
+
+    if tool_type == ToolType::Codex && auth == AuthMode::ApiKey {
+        eprintln!("{} Codex only supports OAuth authentication", "⚠".yellow());
+    }
+
+    let profile = Profile::new_with_auth(name_lower.clone(), tool_type, auth);
     save_profile(&profile)?;
 
+    let mode_info = if tool_type == ToolType::Claude {
+        format!(" ({})", auth)
+    } else {
+        String::new()
+    };
+
     println!(
-        "{} Profile '{}' created for {}",
+        "{} Profile '{}' created for {}{}",
         "✓".green(),
         name_lower,
-        tool_type
+        tool_type,
+        mode_info
     );
+
+    if auth == AuthMode::ApiKey {
+        println!(
+            "{} Set API key with: rafctl auth set-key {}",
+            "ℹ".cyan(),
+            name_lower
+        );
+    }
 
     Ok(())
 }
@@ -50,10 +76,15 @@ pub fn handle_list() -> Result<(), RafctlError> {
                     .last_used
                     .map(|dt| dt.format("%Y-%m-%d %H:%M").to_string())
                     .unwrap_or_else(|| "never".to_string());
+                let auth_info = if profile.tool == ToolType::Claude {
+                    format!(" {}", profile.auth_mode)
+                } else {
+                    String::new()
+                };
                 println!(
                     "  {} {} (last used: {})",
                     "•".cyan(),
-                    format!("{} [{}]", profile.name, profile.tool).white(),
+                    format!("{} [{}{}]", profile.name, profile.tool, auth_info).white(),
                     last_used.dimmed()
                 );
             }
@@ -86,6 +117,18 @@ pub fn handle_show(name: &str) -> Result<(), RafctlError> {
 
     println!("{}", format!("Profile: {}", profile.name).bold());
     println!("  Tool:       {}", profile.tool);
+    if profile.tool == ToolType::Claude {
+        println!("  Auth mode:  {}", profile.auth_mode);
+        if profile.auth_mode == AuthMode::ApiKey {
+            let has_key = profile.api_key.is_some();
+            let key_status = if has_key {
+                "configured".green()
+            } else {
+                "not set".red()
+            };
+            println!("  API key:    {}", key_status);
+        }
+    }
     println!(
         "  Created:    {}",
         profile.created_at.format("%Y-%m-%d %H:%M:%S")

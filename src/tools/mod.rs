@@ -1,5 +1,7 @@
 pub mod claude;
 pub mod codex;
+#[cfg(target_os = "macos")]
+pub mod keychain;
 
 use std::path::PathBuf;
 use std::process::Command;
