@@ -1,7 +1,8 @@
 pub mod auth;
+pub mod config;
 pub mod profile;
 pub mod run;
-mod status;
+pub mod status;
 
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, Shell};
@@ -38,11 +39,28 @@ pub enum Commands {
         #[arg(help = "Specific profile (shows all if not specified)")]
         profile: Option<String>,
     },
+    #[command(about = "Configuration management")]
+    Config {
+        #[command(subcommand)]
+        action: ConfigAction,
+    },
     #[command(about = "Generate shell completions")]
     Completion {
         #[arg(value_enum)]
         shell: Shell,
     },
+}
+
+#[derive(Subcommand)]
+pub enum ConfigAction {
+    #[command(about = "Show current configuration")]
+    Show,
+    #[command(about = "Set default profile")]
+    SetDefault { profile: String },
+    #[command(about = "Clear default profile")]
+    ClearDefault,
+    #[command(about = "Show configuration file path")]
+    Path,
 }
 
 #[derive(Subcommand)]

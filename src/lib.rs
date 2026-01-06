@@ -11,9 +11,14 @@ use clap::Parser;
 use crate::cli::auth::{
     handle_login, handle_logout, handle_set_key, handle_status as handle_auth_status,
 };
+use crate::cli::config::{
+    handle_clear_default, handle_path as handle_config_path, handle_set_default,
+    handle_show as handle_config_show,
+};
 use crate::cli::profile::{handle_add, handle_list, handle_remove, handle_show};
 use crate::cli::run::handle_run;
-use crate::cli::{AuthAction, Cli, Commands, ProfileAction};
+use crate::cli::status::handle_status;
+use crate::cli::{AuthAction, Cli, Commands, ConfigAction, ProfileAction};
 
 /// Main entry point for the CLI application.
 pub fn run() -> Result<()> {
@@ -59,11 +64,22 @@ pub fn run() -> Result<()> {
             }
         }
         Commands::Status { profile } => {
-            println!(
-                "Status: {} (not implemented)",
-                profile.unwrap_or_else(|| "all".to_string())
-            );
+            handle_status(profile.as_deref())?;
         }
+        Commands::Config { action } => match action {
+            ConfigAction::Show => {
+                handle_config_show()?;
+            }
+            ConfigAction::SetDefault { profile } => {
+                handle_set_default(&profile)?;
+            }
+            ConfigAction::ClearDefault => {
+                handle_clear_default()?;
+            }
+            ConfigAction::Path => {
+                handle_config_path()?;
+            }
+        },
         Commands::Completion { shell } => {
             cli::generate_completions(shell);
         }
