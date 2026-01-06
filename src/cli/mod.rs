@@ -1,18 +1,45 @@
 pub mod auth;
 pub mod config;
+pub mod output;
 pub mod profile;
 pub mod run;
 pub mod status;
 
-use clap::{CommandFactory, Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::{generate, Shell};
 use std::io;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum, Default)]
+pub enum OutputFormat {
+    #[default]
+    Human,
+    Json,
+    Plain,
+}
 
 #[derive(Parser)]
 #[command(name = "rafctl", version, about = "AI Coding Agent Profile Manager ☕")]
 pub struct Cli {
+    #[arg(long, global = true, help = "Output as JSON")]
+    pub json: bool,
+
+    #[arg(long, global = true, help = "Plain output (no colors or emoji)")]
+    pub plain: bool,
+
     #[command(subcommand)]
     pub command: Commands,
+}
+
+impl Cli {
+    pub fn output_format(&self) -> OutputFormat {
+        if self.json {
+            OutputFormat::Json
+        } else if self.plain || std::env::var("NO_COLOR").is_ok() {
+            OutputFormat::Plain
+        } else {
+            OutputFormat::Human
+        }
+    }
 }
 
 #[derive(Subcommand)]

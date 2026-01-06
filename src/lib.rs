@@ -23,6 +23,7 @@ use crate::cli::{AuthAction, Cli, Commands, ConfigAction, ProfileAction};
 /// Main entry point for the CLI application.
 pub fn run() -> Result<()> {
     let cli = Cli::parse();
+    let format = cli.output_format();
 
     match cli.command {
         Commands::Profile { action } => match action {
@@ -34,13 +35,13 @@ pub fn run() -> Result<()> {
                 handle_add(&name, &tool, auth_mode.as_deref())?;
             }
             ProfileAction::List => {
-                handle_list()?;
+                handle_list(format)?;
             }
             ProfileAction::Remove { name } => {
                 handle_remove(&name)?;
             }
             ProfileAction::Show { name } => {
-                handle_show(&name)?;
+                handle_show(&name, format)?;
             }
         },
         Commands::Auth { action } => match action {
@@ -64,11 +65,11 @@ pub fn run() -> Result<()> {
             }
         }
         Commands::Status { profile } => {
-            handle_status(profile.as_deref())?;
+            handle_status(profile.as_deref(), format)?;
         }
         Commands::Config { action } => match action {
             ConfigAction::Show => {
-                handle_config_show()?;
+                handle_config_show(format)?;
             }
             ConfigAction::SetDefault { profile } => {
                 handle_set_default(&profile)?;

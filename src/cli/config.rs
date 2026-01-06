@@ -1,22 +1,52 @@
 use colored::Colorize;
+use serde::Serialize;
 
+use super::output::print_json;
+use super::OutputFormat;
 use crate::core::config::{load_global_config, save_global_config};
 use crate::core::profile::{get_config_dir, profile_exists};
 use crate::error::RafctlError;
 
-pub fn handle_show() -> Result<(), RafctlError> {
+#[derive(Serialize)]
+struct ConfigOutput {
+    default_profile: Option<String>,
+    last_used_profile: Option<String>,
+    config_directory: String,
+}
+
+pub fn handle_show(format: OutputFormat) -> Result<(), RafctlError> {
     let config = load_global_config()?;
-
-    println!("{}", "Configuration:".bold());
-
-    let default_profile = config.default_profile.as_deref().unwrap_or("(not set)");
-    println!("  Default profile:   {}", default_profile);
-
-    let last_used = config.last_used_profile.as_deref().unwrap_or("(none)");
-    println!("  Last used profile: {}", last_used);
-
     let config_dir = get_config_dir()?;
-    println!("  Config directory:  {}", config_dir.display());
+
+    let output = ConfigOutput {
+        default_profile: config.default_profile.clone(),
+        last_used_profile: config.last_used_profile.clone(),
+        config_directory: config_dir.display().to_string(),
+    };
+
+    match format {
+        OutputFormat::Json => {
+            print_json(&output);
+        }
+        OutputFormat::Plain => {
+            let default = config.default_profile.as_deref().unwrap_or("(not set)");
+            let last_used = config.last_used_profile.as_deref().unwrap_or("(none)");
+            println!("default_profile={}", default);
+            println!("last_used_profile={}", last_used);
+            println!("config_directory={}", config_dir.display());
+        }
+        OutputFormat::Human => {
+            println!("{}", "Configuration:".bold());
+
+            let default_profile = config.default_profile.as_deref().unwrap_or("(not set)");
+            println!("  Default profile:   {}", default_profile);
+
+            let last_used = config.last_used_profile.as_deref().unwrap_or("(none)");
+            println!("  Last used profile: {}", last_used);
+
+            println!("  Config directory:  {}", config_dir.display());
+        }
+    }
 
     Ok(())
 }
