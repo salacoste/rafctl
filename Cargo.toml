@@ -1,0 +1,34 @@
+[package]
+name = "rafctl"
+version = "0.1.0"
+edition = "2021"
+description = "AI Coding Agent Profile Manager — Smooth as vanilla raf ☕"
+license = "MIT"
+repository = "https://github.com/salacoste/rafctl"
+keywords = ["cli", "claude", "codex", "profile", "manager"]
+categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "rafctl"
+path = "src/main.rs"
+
+[lib]
+name = "rafctl"
+path = "src/lib.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+clap_complete = "4"
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+thiserror = "1"
+anyhow = "1"
+colored = "2"
+comfy-table = "7"
+dirs = "5"
+chrono = { version = "0.4", features = ["serde"] }
+
+[dev-dependencies]
+tempfile = "3"
+assert_cmd = "2"
+predicates = "3"
