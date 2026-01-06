@@ -1,4 +1,4 @@
-mod auth;
+pub mod auth;
 pub mod profile;
 mod run;
 mod status;

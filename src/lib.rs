@@ -8,6 +8,7 @@ pub mod tools;
 use anyhow::Result;
 use clap::Parser;
 
+use crate::cli::auth::{handle_login, handle_logout, handle_status as handle_auth_status};
 use crate::cli::profile::{handle_add, handle_list, handle_remove, handle_show};
 use crate::cli::{AuthAction, Cli, Commands, ProfileAction};
 
@@ -32,16 +33,13 @@ pub fn run() -> Result<()> {
         },
         Commands::Auth { action } => match action {
             AuthAction::Login { profile } => {
-                println!("Auth login: {} (not implemented)", profile);
+                handle_login(&profile)?;
             }
             AuthAction::Logout { profile } => {
-                println!("Auth logout: {} (not implemented)", profile);
+                handle_logout(&profile)?;
             }
             AuthAction::Status { profile } => {
-                println!(
-                    "Auth status: {} (not implemented)",
-                    profile.unwrap_or_else(|| "all".to_string())
-                );
+                handle_auth_status(profile.as_deref())?;
             }
         },
         Commands::Run { profile } => {
