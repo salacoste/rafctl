@@ -3,6 +3,7 @@ use serde::Serialize;
 
 use super::output::print_json;
 use super::OutputFormat;
+use crate::core::credentials;
 use crate::core::profile::{
     delete_profile, find_similar_profile, list_profiles, load_profile, profile_exists,
     save_profile, validate_profile_name, AuthMode, Profile, ToolType,
@@ -107,7 +108,8 @@ pub fn handle_list(format: OutputFormat) -> Result<(), RafctlError> {
                 api_key_configured: if profile.tool == ToolType::Claude
                     && profile.auth_mode == AuthMode::ApiKey
                 {
-                    Some(profile.api_key.is_some())
+                    #[allow(deprecated)]
+                    Some(credentials::has_api_key_configured(name, &profile.api_key))
                 } else {
                     None
                 },
@@ -194,7 +196,11 @@ pub fn handle_show(name: &str, format: OutputFormat) -> Result<(), RafctlError> 
         api_key_configured: if profile.tool == ToolType::Claude
             && profile.auth_mode == AuthMode::ApiKey
         {
-            Some(profile.api_key.is_some())
+            #[allow(deprecated)]
+            Some(credentials::has_api_key_configured(
+                &name_lower,
+                &profile.api_key,
+            ))
         } else {
             None
         },
@@ -214,7 +220,9 @@ pub fn handle_show(name: &str, format: OutputFormat) -> Result<(), RafctlError> 
             if profile.tool == ToolType::Claude {
                 println!("Auth mode: {}", profile.auth_mode);
                 if profile.auth_mode == AuthMode::ApiKey {
-                    let has_key = profile.api_key.is_some();
+                    #[allow(deprecated)]
+                    let has_key =
+                        credentials::has_api_key_configured(&name_lower, &profile.api_key);
                     println!(
                         "API key: {}",
                         if has_key { "configured" } else { "not set" }
@@ -239,7 +247,9 @@ pub fn handle_show(name: &str, format: OutputFormat) -> Result<(), RafctlError> 
             if profile.tool == ToolType::Claude {
                 println!("  Auth mode:  {}", profile.auth_mode);
                 if profile.auth_mode == AuthMode::ApiKey {
-                    let has_key = profile.api_key.is_some();
+                    #[allow(deprecated)]
+                    let has_key =
+                        credentials::has_api_key_configured(&name_lower, &profile.api_key);
                     let key_status = if has_key {
                         "configured".green()
                     } else {

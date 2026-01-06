@@ -30,6 +30,7 @@ dirs = "5"
 chrono = { version = "0.4", features = ["serde"] }
 whoami = "1"
 fs2 = "0.4"
+keyring = "3"
 ureq = { version = "2", features = ["json"] }
 ratatui = "0.29"
 crossterm = "0.29"

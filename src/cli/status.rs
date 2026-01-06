@@ -5,6 +5,7 @@ use serde::Serialize;
 use crate::cli::output::print_json;
 use crate::cli::OutputFormat;
 use crate::core::config::load_global_config;
+use crate::core::credentials;
 use crate::core::profile::{list_profiles, load_profile, AuthMode, ToolType};
 use crate::error::RafctlError;
 use crate::tools::is_authenticated;
@@ -82,7 +83,9 @@ fn show_single_status(profile_name: &str, format: OutputFormat) -> Result<(), Ra
             if profile.tool == ToolType::Claude {
                 println!("  Auth mode: {}", profile.auth_mode);
                 if profile.auth_mode == AuthMode::ApiKey {
-                    let has_key = profile.api_key.is_some();
+                    #[allow(deprecated)]
+                    let has_key =
+                        credentials::has_api_key_configured(&name_lower, &profile.api_key);
                     println!(
                         "  API key: {}",
                         if has_key { "configured" } else { "not set" }
@@ -114,7 +117,9 @@ fn show_single_status(profile_name: &str, format: OutputFormat) -> Result<(), Ra
             if profile.tool == ToolType::Claude {
                 println!("  Auth mode:  {}", profile.auth_mode);
                 if profile.auth_mode == AuthMode::ApiKey {
-                    let has_key = profile.api_key.is_some();
+                    #[allow(deprecated)]
+                    let has_key =
+                        credentials::has_api_key_configured(&name_lower, &profile.api_key);
                     let key_status = if has_key {
                         "configured".green()
                     } else {

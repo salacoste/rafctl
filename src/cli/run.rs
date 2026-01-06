@@ -4,6 +4,7 @@ use chrono::Utc;
 use colored::Colorize;
 
 use crate::core::config::{get_default_profile, set_last_used_profile};
+use crate::core::credentials::{self, CredentialType};
 use crate::core::profile::{
     get_config_dir, list_profiles, load_profile, profile_exists, save_profile, AuthMode, Profile,
     ToolType,
@@ -40,10 +41,13 @@ pub fn handle_run(profile_name: Option<&str>, args: &[String]) -> Result<i32, Ra
 }
 
 fn launch_with_api_key(profile: &Profile, args: &[String]) -> Result<i32, RafctlError> {
-    let api_key = profile
-        .api_key
-        .as_ref()
-        .ok_or_else(|| RafctlError::NoApiKey(profile.name.clone()))?;
+    #[allow(deprecated)]
+    let api_key = if let Some(ref key) = profile.api_key {
+        key.clone()
+    } else {
+        credentials::get_credential(&profile.name, CredentialType::ApiKey)?
+            .ok_or_else(|| RafctlError::NoApiKey(profile.name.clone()))?
+    };
 
     let config_dir = profile.tool.config_dir_for_profile(&profile.name)?;
 
@@ -68,11 +72,9 @@ fn launch_with_api_key(profile: &Profile, args: &[String]) -> Result<i32, Rafctl
 
 #[cfg(target_os = "macos")]
 fn launch_with_oauth(profile: &Profile, args: &[String]) -> Result<i32, RafctlError> {
-    use crate::tools::keychain;
     use fs2::FileExt;
     use std::fs::OpenOptions;
 
-    // Get or create the lockfile path
     let config_dir = get_config_dir()?;
     std::fs::create_dir_all(&config_dir).map_err(|e| RafctlError::ConfigWrite {
         path: config_dir.clone(),
@@ -80,7 +82,6 @@ fn launch_with_oauth(profile: &Profile, args: &[String]) -> Result<i32, RafctlEr
     })?;
     let lock_path = config_dir.join("oauth.lock");
 
-    // Try to acquire exclusive lock
     let lock_file = OpenOptions::new()
         .write(true)
         .create(true)
@@ -91,23 +92,19 @@ fn launch_with_oauth(profile: &Profile, args: &[String]) -> Result<i32, RafctlEr
             source: e,
         })?;
 
-    // Try non-blocking lock first to give a better error message
     if lock_file.try_lock_exclusive().is_err() {
         return Err(RafctlError::OAuthConflict);
     }
 
-    // Write current profile name to lockfile for debugging
     use std::io::Write;
     let mut lock_file = lock_file;
     let _ = writeln!(lock_file, "{}", profile.name);
 
-    let token = keychain::read_oauth_token(&profile.name)?
+    let token = credentials::get_credential(&profile.name, CredentialType::OAuthToken)?
         .ok_or_else(|| RafctlError::NotAuthenticated(profile.name.clone()))?;
 
-    keychain::swap_to_claude_keychain(&token)?;
+    credentials::write_claude_system_token(&token)?;
 
-    // Launch the tool - lock_file is intentionally kept in scope to hold the lock
-    // until the child process exits. The lock is released when lock_file is dropped.
     #[allow(clippy::let_and_return)]
     let result = launch_default(profile, args);
     result

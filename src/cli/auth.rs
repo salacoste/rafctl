@@ -3,6 +3,7 @@ use std::process::{Command, Stdio};
 
 use colored::Colorize;
 
+use crate::core::credentials::{self, CredentialType};
 use crate::core::profile::{
     list_profiles, load_profile, profile_exists, save_profile, AuthMode, ToolType,
 };
@@ -164,21 +165,35 @@ pub fn handle_logout(profile_name: &str) -> Result<(), RafctlError> {
     let profile = load_profile(&name_lower)?;
     let cred_path = profile.tool.credential_path(&name_lower)?;
 
-    if !cred_path.exists() {
+    let mut removed_something = false;
+
+    if cred_path.exists() {
+        std::fs::remove_file(&cred_path).map_err(|e| RafctlError::ConfigWrite {
+            path: cred_path,
+            source: e,
+        })?;
+        removed_something = true;
+    }
+
+    if credentials::has_credential(&name_lower, CredentialType::OAuthToken)? {
+        credentials::delete_credential(&name_lower, CredentialType::OAuthToken)?;
+        removed_something = true;
+    }
+
+    if credentials::has_credential(&name_lower, CredentialType::ApiKey)? {
+        credentials::delete_credential(&name_lower, CredentialType::ApiKey)?;
+        removed_something = true;
+    }
+
+    if removed_something {
+        println!("{} Logged out of '{}'", "✓".green(), name_lower);
+    } else {
         println!(
             "{} Profile '{}' is not authenticated",
             "ℹ".cyan(),
             name_lower
         );
-        return Ok(());
     }
-
-    std::fs::remove_file(&cred_path).map_err(|e| RafctlError::ConfigWrite {
-        path: cred_path,
-        source: e,
-    })?;
-
-    println!("{} Logged out of '{}'", "✓".green(), name_lower);
 
     Ok(())
 }
@@ -190,7 +205,7 @@ pub fn handle_set_key(profile_name: &str, api_key: Option<&str>) -> Result<(), R
         return Err(RafctlError::ProfileNotFound(name_lower));
     }
 
-    let mut profile = load_profile(&name_lower)?;
+    let profile = load_profile(&name_lower)?;
 
     if profile.tool != ToolType::Claude {
         eprintln!(
@@ -238,10 +253,24 @@ pub fn handle_set_key(profile_name: &str, api_key: Option<&str>) -> Result<(), R
         );
     }
 
-    profile.api_key = Some(key);
-    save_profile(&profile)?;
+    credentials::store_credential(&name_lower, CredentialType::ApiKey, &key)?;
 
-    println!("{} API key set for profile '{}'", "✓".green(), name_lower);
+    #[allow(deprecated)]
+    if profile.api_key.is_some() {
+        let mut updated_profile = profile;
+        updated_profile.api_key = None;
+        save_profile(&updated_profile)?;
+        println!(
+            "{} Migrated API key from plaintext to secure storage",
+            "ℹ".cyan()
+        );
+    }
+
+    println!(
+        "{} API key set for profile '{}' (stored securely)",
+        "✓".green(),
+        name_lower
+    );
 
     Ok(())
 }

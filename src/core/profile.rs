@@ -85,15 +85,18 @@ pub struct Profile {
     /// Only applicable for Claude - Codex always uses OAuth
     #[serde(default)]
     pub auth_mode: AuthMode,
-    /// API key for API Key mode (stored encrypted in profile)
-    /// Only used when auth_mode is ApiKey
+    /// DEPRECATED: API key is now stored in secure keyring
+    /// This field is kept for backwards compatibility during migration
+    /// New profiles should NOT use this field
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[deprecated(note = "Use credentials module for API key storage")]
     pub api_key: Option<String>,
     pub created_at: DateTime<Utc>,
     pub last_used: Option<DateTime<Utc>>,
 }
 
 impl Profile {
+    #[allow(deprecated)]
     pub fn new(name: String, tool: ToolType) -> Self {
         Self {
             name,
@@ -105,6 +108,7 @@ impl Profile {
         }
     }
 
+    #[allow(deprecated)]
     pub fn new_with_auth(name: String, tool: ToolType, auth_mode: AuthMode) -> Self {
         Self {
             name,
@@ -348,6 +352,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_profile_creation() {
         let profile = Profile::new("work".to_string(), ToolType::Claude);
         assert_eq!(profile.name, "work");
@@ -358,6 +363,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_profile_creation_with_auth() {
         let profile = Profile::new_with_auth(
             "api-profile".to_string(),
@@ -393,6 +399,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_profile_backwards_compatibility() {
         let old_yaml = r#"
 name: old-profile

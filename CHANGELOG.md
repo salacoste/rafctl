@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **API keys now stored in secure platform keyring** instead of plaintext YAML
+  - macOS: Keychain
+  - Linux: secret-service (libsecret/GNOME Keyring)
+  - Windows: Windows Credential Manager
+  - Backwards compatible: existing plaintext keys still work during migration
+
+### Changed
+
+- Replaced custom macOS Keychain code with cross-platform `keyring` crate
+- OAuth tokens and API keys now use unified credential storage
+- `Profile.api_key` field deprecated (stored in keyring instead)
+
+### Added
+
+- New `core::credentials` module for cross-platform credential management
+
 ## [0.2.0] - 2026-01-06
 
 ### Added
