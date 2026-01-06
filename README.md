@@ -219,6 +219,13 @@ These names are reserved and cannot be used: `default`, `config`, `cache`, `prof
 - [x] TUI dashboard
 - [ ] Desktop app (Tauri)
 
+## Documentation
+
+See the [docs/](./docs/) folder for detailed guides:
+
+- [Quota Monitoring](./docs/quota-monitoring.md) - Track Claude API usage limits
+- [TUI Dashboard](./docs/dashboard.md) - Interactive terminal interface
+
 ## Development
 
 ```bash
