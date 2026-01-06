@@ -10,6 +10,7 @@ use clap::Parser;
 
 use crate::cli::auth::{handle_login, handle_logout, handle_status as handle_auth_status};
 use crate::cli::profile::{handle_add, handle_list, handle_remove, handle_show};
+use crate::cli::run::handle_run;
 use crate::cli::{AuthAction, Cli, Commands, ProfileAction};
 
 /// Main entry point for the CLI application.
@@ -42,11 +43,11 @@ pub fn run() -> Result<()> {
                 handle_auth_status(profile.as_deref())?;
             }
         },
-        Commands::Run { profile } => {
-            println!(
-                "Run: {} (not implemented)",
-                profile.unwrap_or_else(|| "default".to_string())
-            );
+        Commands::Run { profile, args } => {
+            let exit_code = handle_run(profile.as_deref(), &args)?;
+            if exit_code != 0 {
+                std::process::exit(exit_code);
+            }
         }
         Commands::Status { profile } => {
             println!(

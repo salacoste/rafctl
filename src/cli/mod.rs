@@ -1,6 +1,6 @@
 pub mod auth;
 pub mod profile;
-mod run;
+pub mod run;
 mod status;
 
 use clap::{CommandFactory, Parser, Subcommand};
@@ -30,6 +30,8 @@ pub enum Commands {
     Run {
         #[arg(help = "Profile name (uses last used if not specified)")]
         profile: Option<String>,
+        #[arg(last = true, help = "Arguments to pass to the tool")]
+        args: Vec<String>,
     },
     #[command(about = "Show status of profiles")]
     Status {
