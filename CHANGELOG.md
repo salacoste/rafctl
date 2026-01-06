@@ -50,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Technical
 
-- 21 unit tests, 34 integration tests
+- 22 unit tests, 34 integration tests
 - CI/CD with GitHub Actions (check, fmt, clippy, test)
 - Cross-platform builds (Linux x86_64, macOS x86_64/aarch64)
 - Release workflow with automatic artifact creation

@@ -214,7 +214,7 @@ pub fn handle_set_key(profile_name: &str, api_key: Option<&str>) -> Result<(), R
         Some(k) => k.to_string(),
         None => {
             print!("Enter API key: ");
-            io::stdout().flush().unwrap();
+            let _ = io::stdout().flush();
             let mut input = String::new();
             io::stdin()
                 .read_line(&mut input)
