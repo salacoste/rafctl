@@ -1,162 +1,346 @@
-# Project Context — capctl
+# Project Context — rafctl
 
-**Last Updated:** 2025-01-05
+**Last Updated:** 2026-01-06
 
 ---
 
 ## Project Summary
 
-**capctl** (Coding Agent Profile Controller) is a CLI utility for managing multiple AI coding assistant profiles with full environment isolation.
+**rafctl** (Coding Agent Profile Controller) is a CLI utility for managing multiple AI coding assistant profiles with full environment isolation.
 
 | Attribute | Value |
 |-----------|-------|
-| Language | Rust |
-| Type | CLI utility |
+| Language | Rust 2021 Edition |
+| Type | CLI utility (single binary) |
 | Target Users | Developers using Claude Code / Codex CLI |
 | Core Problem | Cannot run multiple accounts simultaneously |
 | Solution | ENV-based config directory isolation |
 
 ---
 
-## Key Technical Decisions
+## Technology Stack (EXACT VERSIONS)
 
-### Environment Isolation (CRITICAL)
+```toml
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+clap_complete = "4"
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+thiserror = "1"
+anyhow = "1"
+colored = "2"
+comfy-table = "7"
+dirs = "5"
+chrono = { version = "0.4", features = ["serde"] }
 
-The entire architecture relies on environment variable overrides:
+[dev-dependencies]
+tempfile = "3"
+assert_cmd = "2"
+predicates = "3"
+```
+
+---
+
+## Critical Implementation Rules
+
+### Environment Isolation (CORE MECHANISM)
 
 ```bash
 # Claude Code
-CLAUDE_CONFIG_DIR=~/.capctl/profiles/<name>/claude claude
+CLAUDE_CONFIG_DIR=~/.rafctl/profiles/<name>/claude claude
 
 # Codex CLI  
-CODEX_HOME=~/.capctl/profiles/<name>/codex codex
+CODEX_HOME=~/.rafctl/profiles/<name>/codex codex
 ```
 
-**Never** modify global config files. **Always** use isolated directories.
+**NEVER** modify global config files. **ALWAYS** use isolated directories.
 
 ### Directory Structure
 
 ```
-~/.capctl/
-├── config.yaml                 # Global config (default_profile, settings)
-├── profiles/
-│   └── <profile-name>/
-│       ├── meta.yaml           # Profile metadata
-│       └── claude/ or codex/   # Tool-specific config
-└── cache/
-    └── quotas.json             # Cached quota data
+~/.rafctl/                           # 700 permissions (Unix)
+├── config.yaml                      # Global settings
+└── profiles/
+    └── <profile-name>/
+        ├── meta.yaml                # Profile metadata (600 permissions)
+        └── <tool>/                  # Tool config dir (managed by tool)
 ```
 
-### Default Profile Behavior
+### Atomic File Writes (MANDATORY)
 
-- Track `last_used` timestamp in global config
-- `capctl run` without args uses last used profile
-- Auto-generated names: `profile-YYYYMMDD-HHMMSS`
+```rust
+// ALWAYS use temp file + rename pattern
+let tmp_path = path.with_extension("yaml.tmp");
+std::fs::write(&tmp_path, content)?;
+std::fs::rename(&tmp_path, &path)?;
+```
+
+### File Permissions (Unix only)
+
+```rust
+#[cfg(unix)]
+{
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700))?;
+    std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o600))?;
+}
+// Windows: no-op (permissions not applicable)
+```
 
 ---
 
 ## Code Patterns (MUST FOLLOW)
 
 ### Error Handling
+
 ```rust
-// Library code: thiserror
+// Library code (core/, tools/): thiserror
 #[derive(Debug, thiserror::Error)]
-pub enum CapctlError {
+pub enum RafctlError {
     #[error("Profile '{0}' not found")]
     ProfileNotFound(String),
+    
+    #[error("Failed to read config '{path}'")]
+    ConfigRead { 
+        path: PathBuf,
+        #[source] source: std::io::Error,
+    },
 }
 
-// Application code: anyhow
-fn main() -> anyhow::Result<()> { }
+// Application code (main.rs, cli/): anyhow
+pub fn run() -> anyhow::Result<()> { }
 ```
 
+**RULE:** Include path/context in ALL IO errors.
+
 ### Path Handling
+
 ```rust
 // ALWAYS use PathBuf, NEVER String for paths
 use std::path::PathBuf;
 use dirs::home_dir;
 
-let base = home_dir().ok_or(CapctlError::NoHomeDir)?;
-let config = base.join(".capctl").join("config.yaml");
+let base = home_dir().ok_or(RafctlError::NoHomeDir)?;
+let config = base.join(".rafctl").join("config.yaml");
 ```
 
 ### CLI Output
+
 ```rust
 use colored::Colorize;
 
-// Success
+// Success: ✓ green
 println!("{} Profile '{}' created", "✓".green(), name);
 
-// Error
-eprintln!("{} {}", "Error:".red().bold(), msg);
+// Warning: ⚠ yellow  
+println!("{} Auth may need refresh", "⚠".yellow());
+
+// Error: ✗ red
+eprintln!("{} Profile not found", "✗".red());
 
 // Tables: use comfy-table
+use comfy_table::Table;
+```
+
+**Respects NO_COLOR env var automatically.**
+
+### Naming Conventions
+
+| Element | Convention | Example |
+|---------|------------|---------|
+| Modules/files | snake_case | `profile_manager.rs` |
+| Types/structs | PascalCase | `ProfileConfig` |
+| Functions | snake_case | `create_profile()` |
+| Constants | SCREAMING_SNAKE_CASE | `MAX_PROFILE_NAME_LENGTH` |
+| Error variants | Noun-first | `ProfileNotFound` |
+| Bool functions | `is_*` prefix | `is_authenticated()` |
+| YAML keys | snake_case | `default_profile` |
+
+### Import Order
+
+```rust
+// 1. std library
+use std::path::PathBuf;
+
+// 2. External crates
+use clap::Parser;
+use serde::{Deserialize, Serialize};
+
+// 3. Crate modules
+use crate::config::Config;
+use crate::profile::Profile;
 ```
 
 ---
 
-## Forbidden Patterns
+## Architectural Boundaries
 
-| Pattern | Why | Instead |
-|---------|-----|---------|
-| `unwrap()` | Panics in production | Use `?` or `ok_or()` |
-| `expect()` without context | Unclear errors | Add descriptive message |
-| Hardcoded paths | Breaks cross-platform | Use `dirs` + `PathBuf` |
-| `println!` for errors | Goes to stdout | Use `eprintln!` |
-| String paths | Not cross-platform | Use `PathBuf` |
+### Layer Dependencies (UNIDIRECTIONAL)
+
+```
+cli/ ──▶ core/ ──▶ tools/ ──▶ error.rs
+```
+
+| Layer | Can Import From |
+|-------|-----------------|
+| `cli/` | `core/`, `tools/`, `error` |
+| `core/` | `tools/`, `error` |
+| `tools/` | `error` only |
+| `error` | nothing (leaf) |
+
+### Module Responsibilities
+
+| Module | Responsibility |
+|--------|----------------|
+| `cli/` | Parse args, format output, orchestrate |
+| `core/` | Business logic, file I/O, validation |
+| `tools/` | Tool-specific config (ENV vars, paths) |
+| `error` | Error types, messages, suggestions |
+
+---
+
+## Forbidden Patterns (NEVER DO)
+
+```rust
+// ❌ unwrap() in production code
+let config = fs::read_to_string(path).unwrap();
+
+// ❌ expect() without good reason
+let home = home_dir().expect("no home");
+
+// ❌ String for paths
+fn load_config(path: String) -> Result<Config> { }
+
+// ❌ IO errors without context
+Err(e) => Err(e.into())
+
+// ❌ Debug prints left in code
+dbg!(value);
+println!("DEBUG: {}", x);
+
+// ❌ as any / type suppression (if using TypeScript anywhere)
+// ❌ Empty catch blocks
+```
+
+### Instead Use
+
+```rust
+// ✅ ? operator with context
+let config = fs::read_to_string(&path)
+    .map_err(|e| RafctlError::ConfigRead { path: path.clone(), source: e })?;
+
+// ✅ PathBuf for all paths
+fn load_config(path: &Path) -> Result<Config> { }
+
+// ✅ ok_or for Option -> Result
+let home = home_dir().ok_or(RafctlError::NoHomeDir)?;
+```
+
+---
+
+## Profile Name Validation
+
+```rust
+// Pattern: alphanumeric, underscore, hyphen only
+const PROFILE_NAME_PATTERN: &str = r"^[a-zA-Z0-9_-]+$";
+const MAX_PROFILE_NAME_LENGTH: usize = 64;
+
+// Comparison: case-insensitive
+// "Work" == "work"
+```
 
 ---
 
 ## Testing Requirements
 
-1. **Unit tests** in same file (`#[cfg(test)]`)
-2. **Integration tests** use `tempfile::TempDir` for isolation
-3. **All tests must pass** before any PR
-4. Run full suite: `cargo test`
-5. Run single test: `cargo test <test_name>`
+### Unit Tests
+- In same file under `#[cfg(test)]`
+- Use `Arrange / Act / Assert` pattern
 
----
+### Integration Tests
+- Use `tempfile::TempDir` for filesystem isolation
+- CRITICAL: Isolation test must pass (two profiles don't share config)
 
-## CLI Command Structure
-
+### Test Commands
+```bash
+cargo test                     # All tests
+cargo test <test_name>         # Single test
+cargo test -- --nocapture      # With stdout
 ```
-capctl
-├── profile
-│   ├── add <name> --tool <claude|codex>
-│   ├── list
-│   ├── remove <name>
-│   └── show <name>
-├── auth
-│   ├── login <profile>
-│   ├── logout <profile>
-│   └── status [profile]
-├── run [profile] [-- args...]
-├── shell <profile>
-└── status [profile]
+
+### Before Every Commit
+```bash
+cargo fmt --check && cargo clippy -- -D warnings && cargo test
 ```
 
 ---
 
-## Dependencies
+## CI/CD Pipeline
 
-```toml
-# Core
-clap = { version = "4", features = ["derive"] }
-serde = { version = "1", features = ["derive"] }
-serde_yaml = "0.9"
+```yaml
+# On push/PR
+- cargo fmt --check
+- cargo clippy -- -D warnings
+- cargo test
 
-# Error handling
-thiserror = "1"
-anyhow = "1"
+# Matrix: ubuntu-latest, macos-latest
 
-# CLI output
-colored = "2"
-comfy-table = "7"
-
-# System
-dirs = "5"
-chrono = { version = "0.4", features = ["serde"] }
+# On tag (vX.Y.Z)
+- Build 4 targets:
+  - x86_64-unknown-linux-gnu
+  - x86_64-apple-darwin
+  - aarch64-apple-darwin
+  - x86_64-pc-windows-msvc
+- Create GitHub Release with binaries
 ```
+
+---
+
+## Key Data Structures
+
+```rust
+pub struct Profile {
+    pub name: String,
+    pub tool: ToolType,
+    pub created_at: DateTime<Utc>,
+    pub last_used: Option<DateTime<Utc>>,
+}
+
+pub enum ToolType {
+    Claude,  // CLAUDE_CONFIG_DIR
+    Codex,   // CODEX_HOME
+}
+
+pub enum StatusIndicator {
+    Active,   // ✓ green
+    Warning,  // ⚠ yellow (last_used > 7 days)
+    Error,    // ✗ red
+    Unknown,  // ? gray
+}
+```
+
+---
+
+## Auth Approach
+
+- **Spawn tool with ENV isolation, wait for exit**
+- **Check credential file existence** after tool exits
+- **NEVER read credential contents into memory**
+- **No pre-check before `run`** (let tool handle expired tokens)
+- **Timeout:** 10 minutes default, configurable
+
+---
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | General error |
+| 2 | Invalid arguments / usage error |
+| 3 | Profile not found |
+| 4 | Authentication error |
+| 5 | Tool execution error |
 
 ---
 
@@ -165,16 +349,26 @@ chrono = { version = "0.4", features = ["serde"] }
 | Action | Command |
 |--------|---------|
 | Build | `cargo build` |
+| Build release | `cargo build --release` |
 | Test | `cargo test` |
 | Single test | `cargo test test_name` |
 | Lint | `cargo clippy -- -D warnings` |
 | Format | `cargo fmt` |
 | Full check | `cargo fmt --check && cargo clippy -- -D warnings && cargo test` |
+| Docs | `cargo doc --open` |
 
 ---
 
-## Open Decisions (TBD)
+## Implementation Sequence
 
-1. Quota monitoring implementation (parse /status vs API)
-2. Future tool support (Cursor, Aider, Continue)
-3. Team/enterprise features scope
+1. Project scaffolding (Cargo.toml, directory structure)
+2. CLI skeleton with clap (all subcommands stub)
+3. Core data structures (Profile, Config)
+4. File I/O with atomic writes
+5. Tool abstraction (Claude, Codex)
+6. ENV isolation mechanism
+7. **Isolation tests (CRITICAL)** — validates core mechanism
+8. Command implementations
+9. Integration tests
+10. CI/CD setup
+11. Release workflow

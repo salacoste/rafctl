@@ -15,10 +15,10 @@ Cargo.lock
 .AppleDouble
 .LSOverride
 
-# BMAD outputs (keep templates, ignore generated)
-_bmad-output/planning-artifacts/
+# BMAD outputs
+# Keep planning artifacts (PRD, Architecture, Epics) - they are project documentation
+# Ignore implementation artifacts (generated during dev)
 _bmad-output/implementation-artifacts/
-!_bmad-output/project-context.md
 
 # Local environment
 .env

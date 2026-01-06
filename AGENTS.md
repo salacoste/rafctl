@@ -1,4 +1,4 @@
-# AGENTS.md — capctl
+# AGENTS.md — rafctl
 
 Guidelines for AI coding agents working on this repository.
 
@@ -6,7 +6,7 @@ Guidelines for AI coding agents working on this repository.
 
 ## Project Overview
 
-**capctl** is a CLI profile manager for AI coding agents (Claude Code, OpenAI Codex CLI).
+**rafctl** is a CLI profile manager for AI coding agents (Claude Code, OpenAI Codex CLI).
 
 | Aspect | Details |
 |--------|---------|
@@ -67,7 +67,7 @@ enum ToolType { Claude, Codex }
 fn create_profile(name: &str) -> Result<Profile> { }
 
 // Constants: SCREAMING_SNAKE_CASE
-const DEFAULT_CONFIG_DIR: &str = ".capctl";
+const DEFAULT_CONFIG_DIR: &str = ".rafctl";
 
 // Lifetimes: short lowercase ('a, 'b)
 fn parse<'a>(input: &'a str) -> &'a str { }
@@ -90,7 +90,7 @@ use crate::profile::Profile;
 ```rust
 // Use thiserror for custom errors
 #[derive(Debug, thiserror::Error)]
-pub enum CapctlError {
+pub enum RafctlError {
     #[error("Profile '{0}' not found")]
     ProfileNotFound(String),
     
@@ -109,9 +109,9 @@ pub fn run() -> anyhow::Result<()> { }
 ### CLI Structure (clap)
 
 ```rust
-/// capctl - AI Coding Agent Profile Manager
+/// rafctl - AI Coding Agent Profile Manager
 #[derive(Parser)]
-#[command(name = "capctl", version, about)]
+#[command(name = "rafctl", version, about)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -138,7 +138,7 @@ enum Commands {
 ## Project Structure
 
 ```
-capctl/
+rafctl/
 ├── Cargo.toml
 ├── src/
 │   ├── main.rs              # Entry point, CLI parsing
@@ -211,13 +211,13 @@ use dirs::home_dir;
 // Always use PathBuf for paths, not String
 let config_path: PathBuf = home_dir()
     .expect("Home directory not found")
-    .join(".capctl")
+    .join(".rafctl")
     .join("config.yaml");
 ```
 
 ### 2. Config Files
-- Global config: `~/.capctl/config.yaml`
-- Profile metadata: `~/.capctl/profiles/<name>/meta.yaml`
+- Global config: `~/.rafctl/config.yaml`
+- Profile metadata: `~/.rafctl/profiles/<name>/meta.yaml`
 - Use serde with YAML for all config files
 
 ### 3. Output Formatting

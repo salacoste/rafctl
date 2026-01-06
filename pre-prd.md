@@ -1,4 +1,4 @@
-# capctl — Pre-PRD Document
+# rafctl — Pre-PRD Document
 ## AI Coding Agent Profile Manager
 
 **Версия:** 0.1 (Pre-PRD)  
@@ -9,7 +9,7 @@
 
 ## 1. Executive Summary
 
-**capctl** — это менеджер профилей для AI coding agents (Claude Code, OpenAI Codex CLI), который позволяет разработчикам:
+**rafctl** — это менеджер профилей для AI coding agents (Claude Code, OpenAI Codex CLI), который позволяет разработчикам:
 - Управлять множеством аккаунтов для каждого инструмента
 - Запускать несколько изолированных сессий одновременно
 - Отслеживать квоты и лимиты по каждому аккаунту
@@ -42,7 +42,7 @@
 > 3. Войти в аккаунт B
 > 4. Открыть Claude Code заново
 >
-> С capctl: просто открыть новый терминал с `capctl run client-project` и `capctl run personal`
+> С rafctl: просто открыть новый терминал с `rafctl run client-project` и `rafctl run personal`
 
 ---
 
@@ -63,7 +63,7 @@
 
 ## 4. Core Value Proposition
 
-| Без capctl | С capctl |
+| Без rafctl | С rafctl |
 |------------|----------|
 | 1 активный аккаунт на инструмент | Неограниченное количество профилей |
 | Ручное переключение через re-login | Мгновенное переключение одной командой |
@@ -99,7 +99,7 @@
 | US-3.1 | Как разработчик, я хочу запустить Claude Code с конкретным профилем в изолированном окружении | Must Have |
 | US-3.2 | Как разработчик, я хочу запустить несколько инстансов Claude Code с разными профилями одновременно | Must Have |
 | US-3.3 | Как разработчик, я хочу запустить Codex CLI с конкретным профилем | Must Have |
-| US-3.4 | Как разработчик, я хочу чтобы мои обычные настройки shell (PATH, aliases) сохранялись при запуске через capctl | Must Have |
+| US-3.4 | Как разработчик, я хочу чтобы мои обычные настройки shell (PATH, aliases) сохранялись при запуске через rafctl | Must Have |
 
 ### Epic 4: Quota Monitoring
 
@@ -117,48 +117,48 @@
 
 #### Profile Management
 ```bash
-capctl profile add <name> --tool <claude|codex>   # Создать профиль
-capctl profile list                                # Список профилей
-capctl profile remove <name>                       # Удалить профиль
-capctl profile show <name>                         # Детали профиля
+rafctl profile add <name> --tool <claude|codex>   # Создать профиль
+rafctl profile list                                # Список профилей
+rafctl profile remove <name>                       # Удалить профиль
+rafctl profile show <name>                         # Детали профиля
 ```
 
 #### Authentication
 ```bash
-capctl auth login <profile>    # Авторизовать профиль
-capctl auth status <profile>   # Проверить статус авторизации
-capctl auth logout <profile>   # Выйти из профиля
+rafctl auth login <profile>    # Авторизовать профиль
+rafctl auth status <profile>   # Проверить статус авторизации
+rafctl auth logout <profile>   # Выйти из профиля
 ```
 
 **Flow авторизации:**
-1. Пользователь запускает `capctl auth login work-claude`
-2. capctl показывает ссылку для авторизации
+1. Пользователь запускает `rafctl auth login work-claude`
+2. rafctl показывает ссылку для авторизации
 3. Пользователь переходит по ссылке, авторизуется в браузере
 4. Claude Code / Codex завершает OAuth flow
-5. capctl подтверждает успешную авторизацию
+5. rafctl подтверждает успешную авторизацию
 6. Токены сохраняются в изолированной директории профиля
 
 #### Isolated Execution
 ```bash
-capctl run <profile> [-- <args>]   # Запустить инструмент с профилем
-capctl shell <profile>              # Открыть shell с окружением профиля
+rafctl run <profile> [-- <args>]   # Запустить инструмент с профилем
+rafctl shell <profile>              # Открыть shell с окружением профиля
 
 # Примеры:
-capctl run work-claude
-capctl run personal-codex -- --model gpt-4
-capctl shell client-project         # Открывает shell, где claude/codex уже настроены
+rafctl run work-claude
+rafctl run personal-codex -- --model gpt-4
+rafctl shell client-project         # Открывает shell, где claude/codex уже настроены
 ```
 
 #### Quota Display
 ```bash
-capctl status                  # Сводка по всем профилям
-capctl status <profile>        # Детали по конкретному профилю
+rafctl status                  # Сводка по всем профилям
+rafctl status <profile>        # Детали по конкретному профилю
 ```
 
 **Пример вывода:**
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ capctl status                                                   │
+│ rafctl status                                                   │
 ├─────────────────┬────────┬──────────────┬──────────────────────┤
 │ Profile         │ Tool   │ Auth Status  │ Quota (5h)           │
 ├─────────────────┼────────┼──────────────┼──────────────────────┤
@@ -187,8 +187,8 @@ capctl status <profile>        # Детали по конкретному про
 ### 7.1 Directory Structure
 
 ```
-~/.capctl/
-├── config.yaml                    # Глобальный конфиг capctl
+~/.rafctl/
+├── config.yaml                    # Глобальный конфиг rafctl
 ├── profiles/
 │   ├── work-claude/
 │   │   ├── meta.yaml              # Метаданные профиля (name, tool, created_at)
@@ -214,15 +214,15 @@ capctl status <profile>        # Детали по конкретному про
 
 **Ключевой принцип:** Используем переменные окружения для переопределения config directories.
 
-| Tool | ENV Variable | Default | capctl Override |
+| Tool | ENV Variable | Default | rafctl Override |
 |------|--------------|---------|-----------------|
-| Claude Code | `CLAUDE_CONFIG_DIR` | `~/.claude` | `~/.capctl/profiles/<name>/claude` |
-| Codex CLI | `CODEX_HOME` | `~/.codex` | `~/.capctl/profiles/<name>/codex` |
+| Claude Code | `CLAUDE_CONFIG_DIR` | `~/.claude` | `~/.rafctl/profiles/<name>/claude` |
+| Codex CLI | `CODEX_HOME` | `~/.codex` | `~/.rafctl/profiles/<name>/codex` |
 
 **Пример запуска:**
 ```bash
-# capctl run work-claude внутри делает:
-CLAUDE_CONFIG_DIR=~/.capctl/profiles/work-claude/claude claude
+# rafctl run work-claude внутри делает:
+CLAUDE_CONFIG_DIR=~/.rafctl/profiles/work-claude/claude claude
 ```
 
 **Преимущества подхода:**
@@ -235,10 +235,10 @@ CLAUDE_CONFIG_DIR=~/.capctl/profiles/work-claude/claude claude
 
 ```
 ┌─────────┐     ┌─────────┐     ┌──────────────┐     ┌─────────────┐
-│  User   │     │ capctl  │     │ claude/codex │     │   Browser   │
+│  User   │     │ rafctl  │     │ claude/codex │     │   Browser   │
 └────┬────┘     └────┬────┘     └──────┬───────┘     └──────┬──────┘
      │               │                 │                    │
-     │ capctl auth   │                 │                    │
+     │ rafctl auth   │                 │                    │
      │ login work    │                 │                    │
      │──────────────>│                 │                    │
      │               │                 │                    │
@@ -282,10 +282,10 @@ codex /status   # Аналогично
 ```
 
 **Реализация:**
-1. `capctl status` запускает соответствующий инструмент в фоне
+1. `rafctl status` запускает соответствующий инструмент в фоне
 2. Отправляет команду `/status`
 3. Парсит вывод
-4. Кэширует результат в `~/.capctl/cache/quotas.json`
+4. Кэширует результат в `~/.rafctl/cache/quotas.json`
 5. Отображает в удобном формате
 
 **Fallback:** Если парсинг не работает — показываем "Unknown" вместо квот
@@ -320,25 +320,25 @@ codex /status   # Аналогично
 ### 8.1 First Run Experience
 
 ```bash
-$ capctl
+$ rafctl
 
-  Welcome to capctl! 🚀
+  Welcome to rafctl! 🚀
   
-  capctl helps you manage multiple AI coding assistant accounts.
+  rafctl helps you manage multiple AI coding assistant accounts.
   
   Quick start:
-    1. Create a profile:    capctl profile add work --tool claude
-    2. Authorize it:        capctl auth login work
-    3. Start coding:        capctl run work
+    1. Create a profile:    rafctl profile add work --tool claude
+    2. Authorize it:        rafctl auth login work
+    3. Start coding:        rafctl run work
   
-  Run 'capctl help' for all commands.
+  Run 'rafctl help' for all commands.
 ```
 
 ### 8.2 CLI Design Principles
 
-1. **Predictable** — Команды следуют паттерну `capctl <noun> <verb>` или `capctl <action>`
+1. **Predictable** — Команды следуют паттерну `rafctl <noun> <verb>` или `rafctl <action>`
 2. **Helpful errors** — Понятные сообщения об ошибках с suggested fixes
-3. **Minimal typing** — Короткие alias'ы для частых команд (`capctl r` = `capctl run`)
+3. **Minimal typing** — Короткие alias'ы для частых команд (`rafctl r` = `rafctl run`)
 4. **Non-destructive** — Опасные операции требуют подтверждения
 5. **Scriptable** — Поддержка `--json` для автоматизации
 
@@ -346,10 +346,10 @@ $ capctl
 
 ```bash
 # Утро: настраиваем профили
-$ capctl profile add work-anthropic --tool claude
+$ rafctl profile add work-anthropic --tool claude
 ✓ Profile 'work-anthropic' created
 
-$ capctl auth login work-anthropic
+$ rafctl auth login work-anthropic
 Opening authorization link...
 
   → https://claude.ai/oauth/authorize?...
@@ -359,25 +359,25 @@ Opening authorization link...
 
 ✓ Profile 'work-anthropic' authorized successfully!
 
-$ capctl profile add personal --tool claude
+$ rafctl profile add personal --tool claude
 ✓ Profile 'personal' created
 
-$ capctl auth login personal
+$ rafctl auth login personal
 ...
 ✓ Profile 'personal' authorized successfully!
 
 # Работаем над проектом клиента
-$ capctl run work-anthropic
+$ rafctl run work-anthropic
 Starting Claude Code with profile 'work-anthropic'...
 # [Claude Code запускается]
 
 # В другом терминале — личный проект
-$ capctl run personal
+$ rafctl run personal
 Starting Claude Code with profile 'personal'...
 # [Ещё один Claude Code запускается с другим аккаунтом]
 
 # Проверяем статус
-$ capctl status
+$ rafctl status
 ┌─────────────────┬────────┬──────────────┬──────────────────────┐
 │ Profile         │ Tool   │ Status       │ Quota (5h)           │
 ├─────────────────┼────────┼──────────────┼──────────────────────┤
@@ -433,7 +433,7 @@ $ capctl status
 | Symlinks hack | Переключение symlinks | Не работает параллельно |
 | Docker containers | Изоляция через контейнеры | Высокий overhead, сложность |
 | Multiple users (OS) | Разные OS users | Неудобно, overkill |
-| **capctl** | ENV-based isolation | ✓ Легковесно, ✓ Параллельно |
+| **rafctl** | ENV-based isolation | ✓ Легковесно, ✓ Параллельно |
 
 ---
 
@@ -444,16 +444,16 @@ $ capctl status
 - [ ] Profile management (add/list/remove)
 - [ ] Authentication flow (Claude Code)
 - [ ] Authentication flow (Codex)
-- [ ] Isolated execution (`capctl run`)
+- [ ] Isolated execution (`rafctl run`)
 - [ ] Basic status display
 - [ ] Cross-platform builds (macOS, Linux)
 
 ### Phase 2: Enhanced (v0.2)
-- [ ] TUI dashboard (`capctl ui`)
+- [ ] TUI dashboard (`rafctl ui`)
 - [ ] Quota monitoring with caching
 - [ ] Windows native support
 - [ ] Shell completions (bash, zsh, fish)
-- [ ] `capctl shell` command
+- [ ] `rafctl shell` command
 
 ### Phase 3: Polish (v0.3)
 - [ ] Profile groups/tags
@@ -474,11 +474,11 @@ $ capctl status
 
 ### Default Profile Behavior
 - **Decision:** Last used profile becomes default
-- **Implementation:** Track `last_used` timestamp in `~/.capctl/config.yaml`
-- **Usage:** `capctl run` without arguments uses the last used profile
+- **Implementation:** Track `last_used` timestamp in `~/.rafctl/config.yaml`
+- **Usage:** `rafctl run` without arguments uses the last used profile
 
 ### Auto-generated Profile Names
-- **Decision:** When `capctl profile add --tool claude` is called without a name, generate `profile-<timestamp>`
+- **Decision:** When `rafctl profile add --tool claude` is called without a name, generate `profile-<timestamp>`
 - **Format:** `profile-20250105-171823` (YYYYMMDD-HHMMSS)
 - **Rationale:** Unique, sortable, no conflicts
 

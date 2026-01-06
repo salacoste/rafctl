@@ -1,4 +1,4 @@
-# capctl
+# rafctl
 
 **AI Coding Agent Profile Manager** — manage multiple accounts for Claude Code and Codex CLI with full isolation.
 
@@ -11,33 +11,33 @@ You have multiple AI coding assistant accounts (personal, work, client projects)
 
 ## Solution
 
-capctl provides isolated profiles with environment-based separation:
+rafctl provides isolated profiles with environment-based separation:
 
 ```bash
 # Create profiles
-capctl profile add work --tool claude
-capctl profile add personal --tool claude
+rafctl profile add work --tool claude
+rafctl profile add personal --tool claude
 
 # Authenticate each
-capctl auth login work
-capctl auth login personal
+rafctl auth login work
+rafctl auth login personal
 
 # Run simultaneously in different terminals
-capctl run work        # Terminal 1
-capctl run personal    # Terminal 2
+rafctl run work        # Terminal 1
+rafctl run personal    # Terminal 2
 
 # Check status
-capctl status
+rafctl status
 ```
 
 ## How It Works
 
-capctl uses environment variables to redirect config directories:
+rafctl uses environment variables to redirect config directories:
 
-| Tool | ENV Variable | capctl Override |
+| Tool | ENV Variable | rafctl Override |
 |------|--------------|-----------------|
-| Claude Code | `CLAUDE_CONFIG_DIR` | `~/.capctl/profiles/<name>/claude` |
-| Codex CLI | `CODEX_HOME` | `~/.capctl/profiles/<name>/codex` |
+| Claude Code | `CLAUDE_CONFIG_DIR` | `~/.rafctl/profiles/<name>/claude` |
+| Codex CLI | `CODEX_HOME` | `~/.rafctl/profiles/<name>/codex` |
 
 Zero overhead — no containers, no virtualization, just environment isolation.
 
@@ -49,39 +49,39 @@ cargo install --path .
 
 # Or build manually
 cargo build --release
-cp target/release/capctl /usr/local/bin/
+cp target/release/rafctl /usr/local/bin/
 ```
 
 ## Commands
 
 ```bash
 # Profile management
-capctl profile add <name> --tool <claude|codex>
-capctl profile list
-capctl profile remove <name>
-capctl profile show <name>
+rafctl profile add <name> --tool <claude|codex>
+rafctl profile list
+rafctl profile remove <name>
+rafctl profile show <name>
 
 # Authentication
-capctl auth login <profile>
-capctl auth status <profile>
-capctl auth logout <profile>
+rafctl auth login <profile>
+rafctl auth status <profile>
+rafctl auth logout <profile>
 
 # Execution
-capctl run <profile>           # Run tool with profile
-capctl run                     # Run with last used profile
-capctl shell <profile>         # Open shell with profile env
+rafctl run <profile>           # Run tool with profile
+rafctl run                     # Run with last used profile
+rafctl shell <profile>         # Open shell with profile env
 
 # Status
-capctl status                  # All profiles
-capctl status <profile>        # Specific profile
+rafctl status                  # All profiles
+rafctl status <profile>        # Specific profile
 ```
 
 ## Configuration
 
-All data stored in `~/.capctl/`:
+All data stored in `~/.rafctl/`:
 
 ```
-~/.capctl/
+~/.rafctl/
 ├── config.yaml           # Global settings
 ├── profiles/
 │   ├── work/
