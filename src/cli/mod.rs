@@ -1,11 +1,15 @@
+pub mod analytics;
 pub mod auth;
 pub mod config;
 pub mod dashboard;
+pub mod hud;
 pub mod output;
 pub mod profile;
 pub mod quota;
 pub mod run;
+pub mod sessions;
 pub mod status;
+pub mod watch;
 
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::{generate, Shell};
@@ -85,6 +89,41 @@ pub enum Commands {
     },
     #[command(about = "Interactive TUI dashboard")]
     Dashboard,
+    #[command(about = "Switch to a profile (set as default and show status)")]
+    Switch {
+        #[arg(help = "Profile name to switch to")]
+        profile: String,
+    },
+    #[command(about = "Show usage analytics from local stats")]
+    Analytics {
+        #[arg(help = "Profile name (uses default if not specified)")]
+        profile: Option<String>,
+        #[arg(long, default_value = "7", help = "Number of days to show")]
+        days: usize,
+        #[arg(long, help = "Show all profiles")]
+        all: bool,
+        #[arg(long, help = "Show estimated costs")]
+        cost: bool,
+    },
+    #[command(about = "View past Claude Code sessions")]
+    Sessions {
+        #[arg(help = "Session ID to show details (lists recent if not specified)")]
+        session_id: Option<String>,
+        #[arg(long, help = "Show only today's sessions")]
+        today: bool,
+        #[arg(long, default_value = "10", help = "Number of sessions to show")]
+        limit: usize,
+    },
+    #[command(about = "Watch Claude Code session in real-time")]
+    Watch {
+        #[arg(help = "Profile name (uses most recent session if not specified)")]
+        profile: Option<String>,
+    },
+    #[command(about = "Manage HUD statusline plugin")]
+    Hud {
+        #[command(subcommand)]
+        action: HudAction,
+    },
 }
 
 #[derive(Subcommand)]
@@ -97,6 +136,15 @@ pub enum ConfigAction {
     ClearDefault,
     #[command(about = "Show configuration file path")]
     Path,
+    #[command(about = "Configure HUD statusline integration")]
+    Hud {
+        #[arg(long, help = "Enable HUD for profile")]
+        enable: bool,
+        #[arg(long, help = "Disable HUD for profile")]
+        disable: bool,
+        #[arg(help = "Profile name (uses default if not specified)")]
+        profile: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -112,7 +160,11 @@ pub enum ProfileAction {
     #[command(about = "List all profiles")]
     List,
     #[command(about = "Remove a profile")]
-    Remove { name: String },
+    Remove {
+        name: String,
+        #[arg(long, short = 'y', help = "Skip confirmation prompt")]
+        yes: bool,
+    },
     #[command(about = "Show profile details")]
     Show { name: String },
 }
@@ -133,6 +185,25 @@ pub enum AuthAction {
         profile: String,
         #[arg(long, help = "API key (prompts if not provided)")]
         key: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum HudAction {
+    #[command(about = "Install HUD statusline plugin")]
+    Install {
+        #[arg(help = "Profile name (installs globally if not specified)")]
+        profile: Option<String>,
+    },
+    #[command(about = "Uninstall HUD statusline plugin")]
+    Uninstall {
+        #[arg(help = "Profile name (uninstalls globally if not specified)")]
+        profile: Option<String>,
+    },
+    #[command(about = "Show HUD installation status")]
+    Status {
+        #[arg(help = "Profile name (shows global if not specified)")]
+        profile: Option<String>,
     },
 }
 

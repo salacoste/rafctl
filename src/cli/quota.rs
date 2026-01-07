@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
 
@@ -10,6 +12,7 @@ use crate::error::RafctlError;
 use crate::tools::keychain;
 
 const ANTHROPIC_USAGE_API: &str = "https://api.anthropic.com/api/oauth/usage";
+const API_TIMEOUT_SECS: u64 = 30;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UsageWindow {
@@ -252,10 +255,18 @@ fn fetch_usage_for_profile(_profile_name: &str) -> Result<UsageLimits, RafctlErr
 }
 
 fn fetch_usage_from_api(token: &str) -> Result<UsageLimits, RafctlError> {
-    let response = ureq::get(ANTHROPIC_USAGE_API)
+    let agent = ureq::AgentBuilder::new()
+        .timeout(Duration::from_secs(API_TIMEOUT_SECS))
+        .build();
+
+    let response = agent
+        .get(ANTHROPIC_USAGE_API)
         .set("Accept", "application/json")
         .set("Content-Type", "application/json")
-        .set("User-Agent", "rafctl/0.2.0")
+        .set(
+            "User-Agent",
+            &format!("rafctl/{}", env!("CARGO_PKG_VERSION")),
+        )
         .set("Authorization", &format!("Bearer {}", token))
         .set("anthropic-beta", "oauth-2025-04-20")
         .call()

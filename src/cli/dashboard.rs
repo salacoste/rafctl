@@ -9,11 +9,20 @@ use ratatui::widgets::{Block, Cell, Paragraph, Row, Table, TableState};
 use ratatui::{DefaultTerminal, Frame};
 
 use crate::core::profile::{list_profiles, load_profile, AuthMode, ToolType};
+use crate::core::stats::load_profile_stats;
 use crate::error::RafctlError;
 use crate::tools::is_authenticated;
 
 #[cfg(target_os = "macos")]
 use crate::cli::quota::UsageLimits;
+
+/// Action to perform after dashboard exits
+#[derive(Debug, Clone)]
+pub enum DashboardAction {
+    None,
+    Run(String),
+    Login(String),
+}
 
 struct ProfileRow {
     name: String,
@@ -21,6 +30,8 @@ struct ProfileRow {
     auth_mode: AuthMode,
     authenticated: bool,
     last_used: Option<String>,
+    today_messages: u64,
+    tokens_7d: u64,
     #[cfg(target_os = "macos")]
     #[allow(dead_code)]
     usage: Option<UsageLimits>,
@@ -31,6 +42,7 @@ struct App {
     table_state: TableState,
     should_quit: bool,
     message: Option<String>,
+    pending_action: DashboardAction,
 }
 
 impl App {
@@ -45,12 +57,19 @@ impl App {
                     .last_used
                     .map(|dt| dt.format("%Y-%m-%d %H:%M").to_string());
 
+                let stats = load_profile_stats(&name, profile.tool);
+                let today_activity = stats.recent_activity(1);
+                let today_messages = today_activity.first().map(|a| a.message_count).unwrap_or(0);
+                let tokens_7d = stats.total_tokens(Some(7));
+
                 profiles.push(ProfileRow {
                     name: profile.name,
                     tool: profile.tool,
                     auth_mode: profile.auth_mode,
                     authenticated,
                     last_used,
+                    today_messages,
+                    tokens_7d,
                     #[cfg(target_os = "macos")]
                     usage: None,
                 });
@@ -67,6 +86,7 @@ impl App {
             table_state,
             should_quit: false,
             message: None,
+            pending_action: DashboardAction::None,
         })
     }
 
@@ -116,18 +136,14 @@ impl App {
                 KeyCode::Up | KeyCode::Char('k') => self.previous(),
                 KeyCode::Enter | KeyCode::Char('r') => {
                     if let Some(profile) = self.selected_profile() {
-                        self.message = Some(format!(
-                            "Would run: rafctl run {} (press 'q' to exit first)",
-                            profile.name
-                        ));
+                        self.pending_action = DashboardAction::Run(profile.name.clone());
+                        self.should_quit = true;
                     }
                 }
                 KeyCode::Char('l') => {
                     if let Some(profile) = self.selected_profile() {
-                        self.message = Some(format!(
-                            "Would login: rafctl auth login {} (press 'q' to exit first)",
-                            profile.name
-                        ));
+                        self.pending_action = DashboardAction::Login(profile.name.clone());
+                        self.should_quit = true;
                     }
                 }
                 _ => {}
@@ -136,14 +152,14 @@ impl App {
     }
 }
 
-pub fn run_dashboard() -> Result<(), RafctlError> {
+pub fn run_dashboard() -> Result<DashboardAction, RafctlError> {
     let mut terminal = ratatui::init();
     let result = run_app(&mut terminal);
     ratatui::restore();
     result
 }
 
-fn run_app(terminal: &mut DefaultTerminal) -> Result<(), RafctlError> {
+fn run_app(terminal: &mut DefaultTerminal) -> Result<DashboardAction, RafctlError> {
     let mut app = App::new()?;
 
     loop {
@@ -170,7 +186,7 @@ fn run_app(terminal: &mut DefaultTerminal) -> Result<(), RafctlError> {
         }
     }
 
-    Ok(())
+    Ok(app.pending_action)
 }
 
 fn render(frame: &mut Frame, app: &mut App) {
@@ -202,9 +218,17 @@ fn render_header(frame: &mut Frame, area: ratatui::layout::Rect) {
 }
 
 fn render_table(frame: &mut Frame, app: &mut App, area: ratatui::layout::Rect) {
-    let header = Row::new(vec!["Name", "Tool", "Auth Mode", "Status", "Last Used"])
-        .style(Style::new().fg(Color::Yellow).add_modifier(Modifier::BOLD))
-        .bottom_margin(1);
+    let header = Row::new(vec![
+        "Name",
+        "Tool",
+        "Auth",
+        "Status",
+        "Today",
+        "7d Tokens",
+        "Last Used",
+    ])
+    .style(Style::new().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+    .bottom_margin(1);
 
     let rows: Vec<Row> = app
         .profiles
@@ -213,7 +237,7 @@ fn render_table(frame: &mut Frame, app: &mut App, area: ratatui::layout::Rect) {
             let status = if p.authenticated {
                 Cell::from("✓ Auth").style(Style::new().fg(Color::Green))
             } else {
-                Cell::from("✗ No Auth").style(Style::new().fg(Color::Red))
+                Cell::from("✗ No").style(Style::new().fg(Color::Red))
             };
 
             let auth_mode = match p.auth_mode {
@@ -221,22 +245,38 @@ fn render_table(frame: &mut Frame, app: &mut App, area: ratatui::layout::Rect) {
                 AuthMode::ApiKey => "api-key",
             };
 
+            let today = if p.today_messages > 0 {
+                Cell::from(format!("{} msgs", p.today_messages)).style(Style::new().fg(Color::Cyan))
+            } else {
+                Cell::from("—").style(Style::new().fg(Color::DarkGray))
+            };
+
+            let tokens = if p.tokens_7d > 0 {
+                Cell::from(format_tokens(p.tokens_7d)).style(Style::new().fg(Color::Cyan))
+            } else {
+                Cell::from("—").style(Style::new().fg(Color::DarkGray))
+            };
+
             Row::new(vec![
                 Cell::from(p.name.clone()),
                 Cell::from(p.tool.to_string()),
                 Cell::from(auth_mode),
                 status,
+                today,
+                tokens,
                 Cell::from(p.last_used.clone().unwrap_or_else(|| "never".to_string())),
             ])
         })
         .collect();
 
     let widths = [
+        Constraint::Percentage(15),
+        Constraint::Percentage(10),
+        Constraint::Percentage(10),
+        Constraint::Percentage(10),
+        Constraint::Percentage(12),
+        Constraint::Percentage(13),
         Constraint::Percentage(20),
-        Constraint::Percentage(15),
-        Constraint::Percentage(15),
-        Constraint::Percentage(15),
-        Constraint::Percentage(35),
     ];
 
     let table = Table::new(rows, widths)
@@ -276,5 +316,15 @@ fn render_message(frame: &mut Frame, app: &App, area: ratatui::layout::Rect) {
     if let Some(msg) = &app.message {
         let message = Paragraph::new(msg.as_str()).style(Style::new().fg(Color::Yellow));
         frame.render_widget(message, area);
+    }
+}
+
+fn format_tokens(n: u64) -> String {
+    if n >= 1_000_000 {
+        format!("{:.1}M", n as f64 / 1_000_000.0)
+    } else if n >= 1_000 {
+        format!("{:.0}K", n as f64 / 1_000.0)
+    } else {
+        n.to_string()
     }
 }

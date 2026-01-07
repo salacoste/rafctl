@@ -1,9 +1,14 @@
-use std::process::{Command, Stdio};
+use std::collections::HashMap;
+use std::io::Write;
+use std::process::{Command, ExitStatus, Stdio};
 
 use chrono::Utc;
 use colored::Colorize;
 
 use crate::core::config::{get_default_profile, set_last_used_profile};
+use crate::core::constants::{
+    ENV_ANTHROPIC_API_KEY, ENV_RAFCTL_PROFILE, ENV_RAFCTL_PROFILE_TOOL, ENV_RAFCTL_VERSION, VERSION,
+};
 use crate::core::credentials::{self, CredentialType};
 use crate::core::profile::{
     get_config_dir, list_profiles, load_profile, profile_exists, save_profile, AuthMode, Profile,
@@ -23,21 +28,75 @@ pub fn handle_run(profile_name: Option<&str>, args: &[String]) -> Result<i32, Ra
     let mut profile = load_profile(&name_lower)?;
     check_tool_available(profile.tool)?;
 
+    set_terminal_title(&profile.name, profile.tool.command_name());
+
     let exit_code = match (&profile.tool, &profile.auth_mode) {
         (ToolType::Claude, AuthMode::ApiKey) => launch_with_api_key(&profile, args)?,
         (ToolType::Claude, AuthMode::OAuth) => launch_with_oauth(&profile, args)?,
         (ToolType::Codex, _) => launch_default(&profile, args)?,
     };
 
-    profile.last_used = Some(Utc::now());
-    if let Err(e) = save_profile(&profile) {
-        eprintln!("{} Failed to update profile: {}", "⚠".yellow(), e);
-    }
-    if let Err(e) = set_last_used_profile(&name_lower) {
-        eprintln!("{} Failed to update last used: {}", "⚠".yellow(), e);
-    }
+    update_profile_usage(&mut profile, &name_lower);
 
     Ok(exit_code)
+}
+
+fn update_profile_usage(profile: &mut Profile, name_lower: &str) {
+    profile.last_used = Some(Utc::now());
+    if let Err(e) = save_profile(profile) {
+        eprintln!("{} Failed to update profile: {}", "⚠".yellow(), e);
+    }
+    if let Err(e) = set_last_used_profile(name_lower) {
+        eprintln!("{} Failed to update last used: {}", "⚠".yellow(), e);
+    }
+}
+
+fn build_rafctl_env(profile: &Profile) -> HashMap<String, String> {
+    let mut env = HashMap::new();
+    env.insert(ENV_RAFCTL_PROFILE.to_string(), profile.name.clone());
+    env.insert(
+        ENV_RAFCTL_PROFILE_TOOL.to_string(),
+        profile.tool.to_string(),
+    );
+    env.insert(ENV_RAFCTL_VERSION.to_string(), VERSION.to_string());
+    env
+}
+
+fn spawn_tool(
+    profile: &Profile,
+    args: &[String],
+    extra_env: HashMap<String, String>,
+) -> Result<i32, RafctlError> {
+    let config_dir = profile.tool.config_dir_for_profile(&profile.name)?;
+
+    let mut cmd = Command::new(profile.tool.command_name());
+
+    cmd.env(profile.tool.env_var_name(), &config_dir)
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
+
+    for (key, value) in build_rafctl_env(profile) {
+        cmd.env(key, value);
+    }
+
+    for (key, value) in extra_env {
+        cmd.env(key, value);
+    }
+
+    for arg in args {
+        cmd.arg(arg);
+    }
+
+    let status = execute_command(&mut cmd, profile.tool.command_name())?;
+    Ok(status.code().unwrap_or(1))
+}
+
+fn execute_command(cmd: &mut Command, tool_name: &str) -> Result<ExitStatus, RafctlError> {
+    cmd.status().map_err(|e| RafctlError::ProcessSpawn {
+        tool: tool_name.to_string(),
+        message: e.to_string(),
+    })
 }
 
 fn launch_with_api_key(profile: &Profile, args: &[String]) -> Result<i32, RafctlError> {
@@ -49,25 +108,10 @@ fn launch_with_api_key(profile: &Profile, args: &[String]) -> Result<i32, Rafctl
             .ok_or_else(|| RafctlError::NoApiKey(profile.name.clone()))?
     };
 
-    let config_dir = profile.tool.config_dir_for_profile(&profile.name)?;
+    let mut extra_env = HashMap::new();
+    extra_env.insert(ENV_ANTHROPIC_API_KEY.to_string(), api_key);
 
-    let mut cmd = Command::new(profile.tool.command_name());
-    cmd.env("ANTHROPIC_API_KEY", api_key)
-        .env(profile.tool.env_var_name(), &config_dir)
-        .stdin(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit());
-
-    for arg in args {
-        cmd.arg(arg);
-    }
-
-    let status = cmd.status().map_err(|e| RafctlError::ConfigWrite {
-        path: config_dir,
-        source: e,
-    })?;
-
-    Ok(status.code().unwrap_or(1))
+    spawn_tool(profile, args, extra_env)
 }
 
 #[cfg(target_os = "macos")]
@@ -105,13 +149,11 @@ fn launch_with_oauth(profile: &Profile, args: &[String]) -> Result<i32, RafctlEr
 
     credentials::write_claude_system_token(&token)?;
 
-    #[allow(clippy::let_and_return)]
-    let result = launch_default(profile, args);
-    result
+    launch_default(profile, args)
 }
 
 #[cfg(not(target_os = "macos"))]
-fn launch_with_oauth(profile: &Profile, args: &[String]) -> Result<i32, RafctlError> {
+fn launch_with_oauth(profile: &Profile, _args: &[String]) -> Result<i32, RafctlError> {
     eprintln!(
         "{} OAuth mode requires macOS for keychain support",
         "✗".red()
@@ -140,24 +182,17 @@ fn launch_default(profile: &Profile, args: &[String]) -> Result<i32, RafctlError
         return Err(RafctlError::NotAuthenticated(profile.name.clone()));
     }
 
-    let config_dir = profile.tool.config_dir_for_profile(&profile.name)?;
+    spawn_tool(profile, args, HashMap::new())
+}
 
-    let mut cmd = Command::new(profile.tool.command_name());
-    cmd.env(profile.tool.env_var_name(), &config_dir)
-        .stdin(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit());
-
-    for arg in args {
-        cmd.arg(arg);
-    }
-
-    let status = cmd.status().map_err(|e| RafctlError::ConfigWrite {
-        path: config_dir,
-        source: e,
-    })?;
-
-    Ok(status.code().unwrap_or(1))
+fn set_terminal_title(profile_name: &str, tool_name: &str) {
+    let _ = write!(
+        std::io::stdout(),
+        "\x1b]0;[rafctl:{}] {}\x07",
+        profile_name,
+        tool_name
+    );
+    let _ = std::io::stdout().flush();
 }
 
 fn resolve_profile_name(profile_name: Option<&str>) -> Result<String, RafctlError> {
@@ -186,5 +221,5 @@ fn resolve_profile_name(profile_name: Option<&str>) -> Result<String, RafctlErro
         }
     }
 
-    Err(RafctlError::ProfileNotFound("(no default)".to_string()))
+    Err(RafctlError::NoDefaultProfile)
 }

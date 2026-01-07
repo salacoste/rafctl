@@ -32,3 +32,6 @@ logs/
 # Test artifacts
 /tmp/
 *.tmp
+
+# Reference repositories (for analysis)
+_reference/

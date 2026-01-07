@@ -187,7 +187,7 @@ mod profile_tests {
             .success();
 
         rafctl_cmd(home)
-            .args(["profile", "remove", "to-remove"])
+            .args(["profile", "remove", "to-remove", "--yes"])
             .assert()
             .success()
             .stdout(predicate::str::contains("Profile 'to-remove' removed"));

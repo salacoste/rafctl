@@ -18,6 +18,9 @@ pub enum RafctlError {
     #[error("Home directory not found")]
     NoHomeDir,
 
+    #[error("No default profile configured. Set one with: rafctl config set-default <profile>")]
+    NoDefaultProfile,
+
     #[error("Failed to read config '{path}'")]
     ConfigRead {
         path: PathBuf,
@@ -34,6 +37,9 @@ pub enum RafctlError {
 
     #[error("Tool '{tool}' not found. Install: {install_url}")]
     ToolNotFound { tool: String, install_url: String },
+
+    #[error("Failed to spawn '{tool}': {message}")]
+    ProcessSpawn { tool: String, message: String },
 
     #[error("Profile '{0}' is not authenticated")]
     NotAuthenticated(String),

@@ -192,7 +192,7 @@ fn ensure_dir_with_permissions(path: &Path) -> Result<(), RafctlError> {
     Ok(())
 }
 
-fn atomic_write(path: &Path, content: &str) -> Result<(), RafctlError> {
+pub fn atomic_write(path: &Path, content: &str) -> Result<(), RafctlError> {
     let tmp_path = path.with_extension("yaml.tmp");
 
     fs::write(&tmp_path, content).map_err(|e| RafctlError::ConfigWrite {

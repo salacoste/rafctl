@@ -1,3 +1,5 @@
+use std::io::{self, Write};
+
 use colored::Colorize;
 use serde::Serialize;
 
@@ -275,7 +277,7 @@ pub fn handle_show(name: &str, format: OutputFormat) -> Result<(), RafctlError> 
     Ok(())
 }
 
-pub fn handle_remove(name: &str) -> Result<(), RafctlError> {
+pub fn handle_remove(name: &str, skip_confirm: bool) -> Result<(), RafctlError> {
     let name_lower = name.to_lowercase();
 
     if !profile_exists(&name_lower)? {
@@ -290,6 +292,29 @@ pub fn handle_remove(name: &str) -> Result<(), RafctlError> {
             }
         }
         return Err(RafctlError::ProfileNotFound(name_lower));
+    }
+
+    if !skip_confirm {
+        print!(
+            "{} Are you sure you want to remove profile '{}'? [y/N] ",
+            "⚠".yellow(),
+            name_lower
+        );
+        let _ = io::stdout().flush();
+
+        let mut input = String::new();
+        io::stdin()
+            .read_line(&mut input)
+            .map_err(|e| RafctlError::ConfigRead {
+                path: std::path::PathBuf::from("stdin"),
+                source: e,
+            })?;
+
+        let answer = input.trim().to_lowercase();
+        if answer != "y" && answer != "yes" {
+            println!("{} Cancelled", "ℹ".cyan());
+            return Ok(());
+        }
     }
 
     delete_profile(&name_lower)?;

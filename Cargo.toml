@@ -1,6 +1,6 @@
 [package]
 name = "rafctl"
-version = "0.2.0"
+version = "0.4.0"
 edition = "2021"
 description = "AI Coding Agent Profile Manager — Smooth as vanilla raf ☕"
 license = "MIT"
@@ -11,6 +11,10 @@ categories = ["command-line-utilities", "development-tools"]
 [[bin]]
 name = "rafctl"
 path = "src/main.rs"
+
+[[bin]]
+name = "rafctl-hud"
+path = "src/bin/rafctl-hud.rs"
 
 [lib]
 name = "rafctl"
@@ -34,6 +38,8 @@ keyring = "3"
 ureq = { version = "2", features = ["json"] }
 ratatui = "0.29"
 crossterm = "0.29"
+notify = "6"
+rpassword = "7"
 
 [dev-dependencies]
 tempfile = "3"

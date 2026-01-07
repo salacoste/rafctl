@@ -2,6 +2,7 @@ use std::io::{self, Write};
 use std::process::{Command, Stdio};
 
 use colored::Colorize;
+use rpassword::read_password;
 
 use crate::core::credentials::{self, CredentialType};
 use crate::core::profile::{
@@ -230,14 +231,10 @@ pub fn handle_set_key(profile_name: &str, api_key: Option<&str>) -> Result<(), R
         None => {
             print!("Enter API key: ");
             let _ = io::stdout().flush();
-            let mut input = String::new();
-            io::stdin()
-                .read_line(&mut input)
-                .map_err(|e| RafctlError::ConfigRead {
-                    path: std::path::PathBuf::from("stdin"),
-                    source: e,
-                })?;
-            input.trim().to_string()
+            read_password().map_err(|e| RafctlError::ConfigRead {
+                path: std::path::PathBuf::from("stdin"),
+                source: e,
+            })?
         }
     };
 

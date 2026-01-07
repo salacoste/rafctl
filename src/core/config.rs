@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::core::profile::get_config_dir;
+use crate::core::profile::{atomic_write, get_config_dir};
 use crate::error::RafctlError;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -51,10 +51,7 @@ pub fn save_global_config(config: &GlobalConfig) -> Result<(), RafctlError> {
         source: std::io::Error::new(std::io::ErrorKind::InvalidData, e),
     })?;
 
-    fs::write(&config_path, yaml).map_err(|e| RafctlError::ConfigWrite {
-        path: config_path,
-        source: e,
-    })
+    atomic_write(&config_path, &yaml)
 }
 
 pub fn set_last_used_profile(profile_name: &str) -> Result<(), RafctlError> {

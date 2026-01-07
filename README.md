@@ -81,7 +81,8 @@ Download pre-built binaries from [GitHub Releases](https://github.com/salacoste/
 rafctl profile add <name> --tool <claude|codex>
 rafctl profile add <name> --tool claude --auth-mode api-key
 rafctl profile list
-rafctl profile remove <name>
+rafctl profile remove <name>           # Asks for confirmation
+rafctl profile remove <name> --yes     # Skip confirmation
 rafctl profile show <name>
 
 # Authentication
@@ -93,6 +94,7 @@ rafctl auth set-key <profile>   # For API key mode
 # Execution
 rafctl run <profile>            # Run tool with profile
 rafctl run                      # Run with default/last used profile
+rafctl switch <profile>         # Set as default and show status
 
 # Configuration
 rafctl config show              # Show current config
@@ -108,6 +110,18 @@ rafctl status --json            # JSON output for scripting
 # Quota Monitoring
 rafctl quota                    # Show quota for all profiles
 rafctl quota <profile>          # Show quota for specific profile
+
+# Usage Analytics
+rafctl analytics                # Show usage stats for default profile
+rafctl analytics --all          # Show all profiles
+rafctl analytics --cost         # Show estimated costs
+rafctl analytics --days 30      # Custom time range
+
+# Session Monitoring
+rafctl sessions                 # List recent sessions
+rafctl sessions --today         # Today's sessions only
+rafctl sessions <session-id>    # Session details
+rafctl watch                    # Watch live session in real-time
 
 # TUI Dashboard
 rafctl dashboard                # Interactive profile management
@@ -217,6 +231,9 @@ These names are reserved and cannot be used: `default`, `config`, `cache`, `prof
 - [x] CI/CD pipeline
 - [x] Quota monitoring
 - [x] TUI dashboard
+- [x] Usage analytics (v0.3.0)
+- [x] Session monitoring (v0.4.0)
+- [x] Native HUD plugin (v0.4.0)
 - [ ] Desktop app (Tauri)
 
 ## Documentation
@@ -225,6 +242,8 @@ See the [docs/](./docs/) folder for detailed guides:
 
 - [Quota Monitoring](./docs/quota-monitoring.md) - Track Claude API usage limits
 - [TUI Dashboard](./docs/dashboard.md) - Interactive terminal interface
+- [Sessions & Analytics](./docs/sessions.md) - Usage analytics and session monitoring
+- [HUD Statusline](./docs/hud.md) - Native statusline plugin for Claude Code
 
 ## Development
 
@@ -232,7 +251,7 @@ See the [docs/](./docs/) folder for detailed guides:
 # Build
 cargo build
 
-# Test (55 tests: 21 unit + 34 integration)
+# Test (95 tests: 61 unit + 34 integration)
 cargo test
 
 # Lint

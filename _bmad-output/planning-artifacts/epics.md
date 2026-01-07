@@ -925,14 +925,20 @@ Comprehensive integration tests for profile/auth/run commands.
 3. Epic 3 (Tools) — Stories 3.1, 3.2 ✅
 4. Epic 4 (Auth) — Stories 4.1, 4.2, 4.3 ✅
 5. Epic 5 (Execution) — Stories 5.1, 5.2 ✅
-6. Epic 6 (Status/Config) — Stories 6.1, 6.2, 6.3
-7. Epic 7 (Output/Shell) — Stories 7.1, 7.2
-8. Epic 8 (Quality/Release) — Stories 8.1, 8.2, 8.3
-9. Epic 9 (Hardening/Polish) — Stories 9.0-9.6 (before v1.0)
+6. Epic 6 (Status/Config) — Stories 6.1, 6.2, 6.3 ✅
+7. Epic 7 (Output/Shell) — Stories 7.1, 7.2 ✅
+8. Epic 8 (Quality/Release) — Stories 8.1, 8.2, 8.3 ✅
+9. Epic 9 (Hardening/Polish) — Stories 9.0-9.6 ✅ (v0.2.1)
+10. Epic 10 (Quota Monitoring) — ✅ (v0.2.0)
+11. Epic 11 (TUI Dashboard) — ✅ (v0.2.0)
 
 **Critical path:** Epic 1 → Epic 2 → Epic 3 → Epic 5 (Story 5.1) → Epic 8 (Story 8.1 isolation test)
 
-**Post-Review path:** Epic 9.1 (verify CLI) → Epic 9.0 (test infra) → Epic 9.6 (QA tests)
+**Post-MVP (v0.3.0+):** See `epics-v03-analytics.md` for:
+- Epic 12: Local Usage Analytics (stats-cache.json parsing)
+- Epic 13: Profile-Aware HUD Integration
+- Epic 14: Advanced Session Monitoring (transcripts)
+- Epic 15: Native Rust HUD Plugin
 
 ---
 
