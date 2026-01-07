@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-01-08
+
 ### Security
 
 - **API keys now stored in secure platform keyring** instead of plaintext YAML
@@ -160,7 +162,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cross-platform builds (Linux x86_64, macOS x86_64/aarch64)
 - Release workflow with automatic artifact creation
 
-[Unreleased]: https://github.com/salacoste/rafctl/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/salacoste/rafctl/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/salacoste/rafctl/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/salacoste/rafctl/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/salacoste/rafctl/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/salacoste/rafctl/compare/v0.1.0...v0.2.0
