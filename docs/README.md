@@ -1,23 +1,16 @@
 # Documentation
 
-User guides for rafctl features.
+Detailed guides for rafctl features.
 
-## Core Features
-
-- **[Getting Started](./getting-started.md)** - Installation and first steps
-- **[Profile Management](./profiles.md)** - Creating and managing profiles
-- **[Authentication](./authentication.md)** - OAuth and API Key modes
+> [!NOTE]
+> For core features like installation, profile management, and authentication, please refer to the main [README.md](../README.md).
 
 ## Advanced Features
 
 - **[Quota Monitoring](./quota-monitoring.md)** - Track Claude API usage limits
 - **[TUI Dashboard](./dashboard.md)** - Interactive terminal interface
-- **[Shell Completions](./completions.md)** - Tab completion for your shell
-
-## Reference
-
-- **[Configuration](./configuration.md)** - Config files and settings
-- **[Troubleshooting](./troubleshooting.md)** - Common issues and solutions
+- **[Sessions & Analytics](./sessions.md)** - Usage analytics and session monitoring
+- **[HUD Statusline](./hud.md)** - Native statusline plugin for Claude Code
 
 ## Quick Links
 
@@ -27,5 +20,9 @@ User guides for rafctl features.
 | Login | `rafctl auth login <profile>` |
 | Run tool | `rafctl run <profile>` |
 | Check quota | `rafctl quota` |
+| View analytics | `rafctl analytics` |
+| List sessions | `rafctl sessions` |
+| Live watch | `rafctl watch` |
+| Setup HUD | `rafctl hud install` |
 | Open dashboard | `rafctl dashboard` |
 | View status | `rafctl status` |
