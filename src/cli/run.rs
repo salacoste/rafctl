@@ -5,14 +5,15 @@ use std::process::{Command, ExitStatus, Stdio};
 use chrono::Utc;
 use colored::Colorize;
 
+use crate::cli::debug;
 use crate::core::config::{get_default_profile, set_last_used_profile};
 use crate::core::constants::{
     ENV_ANTHROPIC_API_KEY, ENV_RAFCTL_PROFILE, ENV_RAFCTL_PROFILE_TOOL, ENV_RAFCTL_VERSION, VERSION,
 };
 use crate::core::credentials::{self, CredentialType};
 use crate::core::profile::{
-    get_config_dir, list_profiles, load_profile, profile_exists, save_profile, AuthMode, Profile,
-    ToolType,
+    get_config_dir, list_profiles, load_profile, profile_exists, resolve_profile_alias,
+    save_profile, AuthMode, Profile, ToolType,
 };
 use crate::error::RafctlError;
 use crate::tools::{check_tool_available, is_authenticated};
@@ -21,19 +22,33 @@ pub fn handle_run(profile_name: Option<&str>, args: &[String]) -> Result<i32, Ra
     let name = resolve_profile_name(profile_name)?;
     let name_lower = name.to_lowercase();
 
+    debug::debug_labeled("profile", &name_lower);
+
     if !profile_exists(&name_lower)? {
         return Err(RafctlError::ProfileNotFound(name_lower));
     }
 
     let mut profile = load_profile(&name_lower)?;
+    debug::debug_labeled("tool", &profile.tool.to_string());
+    debug::debug_labeled("auth_mode", &profile.auth_mode.to_string());
+
     check_tool_available(profile.tool)?;
 
     set_terminal_title(&profile.name, profile.tool.command_name());
 
     let exit_code = match (&profile.tool, &profile.auth_mode) {
-        (ToolType::Claude, AuthMode::ApiKey) => launch_with_api_key(&profile, args)?,
-        (ToolType::Claude, AuthMode::OAuth) => launch_with_oauth(&profile, args)?,
-        (ToolType::Codex, _) => launch_default(&profile, args)?,
+        (ToolType::Claude, AuthMode::ApiKey) => {
+            debug::debug("launching with API key mode");
+            launch_with_api_key(&profile, args)?
+        }
+        (ToolType::Claude, AuthMode::OAuth) => {
+            debug::debug("launching with OAuth mode");
+            launch_with_oauth(&profile, args)?
+        }
+        (ToolType::Codex, _) => {
+            debug::debug("launching with default mode");
+            launch_default(&profile, args)?
+        }
     };
 
     update_profile_usage(&mut profile, &name_lower);
@@ -69,6 +84,8 @@ fn spawn_tool(
 ) -> Result<i32, RafctlError> {
     let config_dir = profile.tool.config_dir_for_profile(&profile.name)?;
 
+    debug::debug_path("config_dir", &config_dir);
+
     let mut cmd = Command::new(profile.tool.command_name());
 
     cmd.env(profile.tool.env_var_name(), &config_dir)
@@ -77,11 +94,24 @@ fn spawn_tool(
         .stderr(Stdio::inherit());
 
     for (key, value) in build_rafctl_env(profile) {
+        debug::debug_env(&key, &value);
         cmd.env(key, value);
     }
 
     for (key, value) in extra_env {
+        debug::debug_env(
+            &key,
+            if key == ENV_ANTHROPIC_API_KEY {
+                "***"
+            } else {
+                &value
+            },
+        );
         cmd.env(key, value);
+    }
+
+    if !args.is_empty() {
+        debug::debug_labeled("args", &args.join(" "));
     }
 
     for arg in args {
@@ -197,7 +227,7 @@ fn set_terminal_title(profile_name: &str, tool_name: &str) {
 
 fn resolve_profile_name(profile_name: Option<&str>) -> Result<String, RafctlError> {
     if let Some(name) = profile_name {
-        return Ok(name.to_string());
+        return resolve_profile_alias(name);
     }
 
     if let Some(default) = get_default_profile()? {

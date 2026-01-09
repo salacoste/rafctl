@@ -18,6 +18,8 @@ use crate::cli::config::{
     handle_set_default, handle_show as handle_config_show,
 };
 use crate::cli::dashboard::{run_dashboard, DashboardAction};
+use crate::cli::debug::enable_verbose;
+use crate::cli::env::handle_env;
 use crate::cli::hud::{handle_hud_install, handle_hud_status, handle_hud_uninstall};
 use crate::cli::profile::{handle_add, handle_list, handle_remove, handle_show};
 use crate::cli::quota::handle_quota;
@@ -32,6 +34,10 @@ pub fn run() -> Result<()> {
     let cli = Cli::parse();
     let format = cli.output_format();
 
+    if cli.verbose {
+        enable_verbose();
+    }
+
     match cli.command {
         Commands::Profile { action } => match action {
             ProfileAction::Add {
@@ -44,8 +50,8 @@ pub fn run() -> Result<()> {
             ProfileAction::List => {
                 handle_list(format)?;
             }
-            ProfileAction::Remove { name, yes } => {
-                handle_remove(&name, yes)?;
+            ProfileAction::Remove { name, yes, dry_run } => {
+                handle_remove(&name, yes, dry_run)?;
             }
             ProfileAction::Show { name } => {
                 handle_show(&name, format)?;
@@ -55,8 +61,8 @@ pub fn run() -> Result<()> {
             AuthAction::Login { profile } => {
                 handle_login(&profile)?;
             }
-            AuthAction::Logout { profile } => {
-                handle_logout(&profile)?;
+            AuthAction::Logout { profile, dry_run } => {
+                handle_logout(&profile, dry_run)?;
             }
             AuthAction::Status { profile } => {
                 handle_auth_status(profile.as_deref())?;
@@ -149,6 +155,9 @@ pub fn run() -> Result<()> {
                 handle_hud_status(profile.as_deref())?;
             }
         },
+        Commands::Env { profile } => {
+            handle_env(&profile)?;
+        }
     }
 
     Ok(())

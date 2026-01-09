@@ -2,6 +2,8 @@ pub mod analytics;
 pub mod auth;
 pub mod config;
 pub mod dashboard;
+pub mod debug;
+pub mod env;
 pub mod hud;
 pub mod output;
 pub mod profile;
@@ -31,6 +33,9 @@ pub struct Cli {
 
     #[arg(long, global = true, help = "Plain output (no colors or emoji)")]
     pub plain: bool,
+
+    #[arg(short = 'v', long, global = true, help = "Enable verbose/debug output")]
+    pub verbose: bool,
 
     #[command(subcommand)]
     pub command: Commands,
@@ -124,6 +129,11 @@ pub enum Commands {
         #[command(subcommand)]
         action: HudAction,
     },
+    #[command(about = "Export environment variables for a profile")]
+    Env {
+        #[arg(help = "Profile name to export environment for")]
+        profile: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -164,6 +174,8 @@ pub enum ProfileAction {
         name: String,
         #[arg(long, short = 'y', help = "Skip confirmation prompt")]
         yes: bool,
+        #[arg(long, help = "Show what would be done without actually doing it")]
+        dry_run: bool,
     },
     #[command(about = "Show profile details")]
     Show { name: String },
@@ -174,7 +186,11 @@ pub enum AuthAction {
     #[command(about = "Login to a profile")]
     Login { profile: String },
     #[command(about = "Logout from a profile")]
-    Logout { profile: String },
+    Logout {
+        profile: String,
+        #[arg(long, help = "Show what would be done without actually doing it")]
+        dry_run: bool,
+    },
     #[command(about = "Check auth status")]
     Status {
         #[arg(help = "Profile name (shows all if not specified)")]

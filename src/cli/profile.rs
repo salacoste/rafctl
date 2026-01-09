@@ -7,7 +7,7 @@ use super::output::print_json;
 use super::OutputFormat;
 use crate::core::credentials;
 use crate::core::profile::{
-    delete_profile, find_similar_profile, list_profiles, load_profile, profile_exists,
+    delete_profile, list_profiles, load_profile, profile_exists, resolve_profile_alias,
     save_profile, validate_profile_name, AuthMode, Profile, ToolType,
 };
 use crate::error::RafctlError;
@@ -170,22 +170,9 @@ pub fn handle_list(format: OutputFormat) -> Result<(), RafctlError> {
 }
 
 pub fn handle_show(name: &str, format: OutputFormat) -> Result<(), RafctlError> {
-    let name_lower = name.to_lowercase();
-    let profile = load_profile(&name_lower).map_err(|e| {
-        if let RafctlError::ProfileNotFound(_) = e {
-            if let Ok(profiles) = list_profiles() {
-                if let Some(suggestion) = find_similar_profile(name, &profiles) {
-                    eprintln!(
-                        "{} Profile '{}' not found. Did you mean '{}'?",
-                        "✗".red(),
-                        name,
-                        suggestion.green()
-                    );
-                }
-            }
-        }
-        e
-    })?;
+    let resolved_name = resolve_profile_alias(name)?;
+    let name_lower = resolved_name.to_lowercase();
+    let profile = load_profile(&name_lower)?;
 
     let info = ProfileInfo {
         name: profile.name.clone(),
@@ -277,21 +264,15 @@ pub fn handle_show(name: &str, format: OutputFormat) -> Result<(), RafctlError> 
     Ok(())
 }
 
-pub fn handle_remove(name: &str, skip_confirm: bool) -> Result<(), RafctlError> {
-    let name_lower = name.to_lowercase();
+pub fn handle_remove(name: &str, skip_confirm: bool, dry_run: bool) -> Result<(), RafctlError> {
+    let resolved_name = resolve_profile_alias(name)?;
+    let name_lower = resolved_name.to_lowercase();
 
-    if !profile_exists(&name_lower)? {
-        if let Ok(profiles) = list_profiles() {
-            if let Some(suggestion) = find_similar_profile(name, &profiles) {
-                eprintln!(
-                    "{} Profile '{}' not found. Did you mean '{}'?",
-                    "✗".red(),
-                    name,
-                    suggestion.green()
-                );
-            }
-        }
-        return Err(RafctlError::ProfileNotFound(name_lower));
+    if dry_run {
+        println!("{} Would remove profile '{}'", "ℹ".cyan(), name_lower);
+        println!("  • Profile directory: ~/.rafctl/profiles/{}", name_lower);
+        println!("  • Credentials would be deleted from keyring");
+        return Ok(());
     }
 
     if !skip_confirm {

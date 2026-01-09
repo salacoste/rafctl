@@ -6,17 +6,15 @@ use rpassword::read_password;
 
 use crate::core::credentials::{self, CredentialType};
 use crate::core::profile::{
-    list_profiles, load_profile, profile_exists, save_profile, AuthMode, ToolType,
+    list_profiles, load_profile, profile_exists, resolve_profile_alias, save_profile, AuthMode,
+    ToolType,
 };
 use crate::error::RafctlError;
 use crate::tools::{check_tool_available, is_authenticated};
 
 pub fn handle_login(profile_name: &str) -> Result<(), RafctlError> {
-    let name_lower = profile_name.to_lowercase();
-
-    if !profile_exists(&name_lower)? {
-        return Err(RafctlError::ProfileNotFound(name_lower));
-    }
+    let resolved_name = resolve_profile_alias(profile_name)?;
+    let name_lower = resolved_name.to_lowercase();
 
     let profile = load_profile(&name_lower)?;
     check_tool_available(profile.tool)?;
@@ -156,15 +154,26 @@ fn show_all_status() -> Result<(), RafctlError> {
     Ok(())
 }
 
-pub fn handle_logout(profile_name: &str) -> Result<(), RafctlError> {
-    let name_lower = profile_name.to_lowercase();
-
-    if !profile_exists(&name_lower)? {
-        return Err(RafctlError::ProfileNotFound(name_lower));
-    }
+pub fn handle_logout(profile_name: &str, dry_run: bool) -> Result<(), RafctlError> {
+    let resolved_name = resolve_profile_alias(profile_name)?;
+    let name_lower = resolved_name.to_lowercase();
 
     let profile = load_profile(&name_lower)?;
     let cred_path = profile.tool.credential_path(&name_lower)?;
+
+    if dry_run {
+        println!("{} Would logout from profile '{}'", "ℹ".cyan(), name_lower);
+        if cred_path.exists() {
+            println!("  • Would remove credential file: {}", cred_path.display());
+        }
+        if credentials::has_credential(&name_lower, CredentialType::OAuthToken)? {
+            println!("  • Would delete OAuth token from keyring");
+        }
+        if credentials::has_credential(&name_lower, CredentialType::ApiKey)? {
+            println!("  • Would delete API key from keyring");
+        }
+        return Ok(());
+    }
 
     let mut removed_something = false;
 
@@ -200,11 +209,8 @@ pub fn handle_logout(profile_name: &str) -> Result<(), RafctlError> {
 }
 
 pub fn handle_set_key(profile_name: &str, api_key: Option<&str>) -> Result<(), RafctlError> {
-    let name_lower = profile_name.to_lowercase();
-
-    if !profile_exists(&name_lower)? {
-        return Err(RafctlError::ProfileNotFound(name_lower));
-    }
+    let resolved_name = resolve_profile_alias(profile_name)?;
+    let name_lower = resolved_name.to_lowercase();
 
     let profile = load_profile(&name_lower)?;
 

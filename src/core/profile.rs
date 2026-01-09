@@ -299,6 +299,27 @@ pub fn find_similar_profile(input: &str, profiles: &[String]) -> Option<String> 
         .cloned()
 }
 
+pub fn resolve_profile_alias(input: &str) -> Result<String, RafctlError> {
+    let profiles = list_profiles()?;
+
+    let input_lower = input.to_lowercase();
+
+    let exact_match = profiles.iter().find(|p| p.to_lowercase() == input_lower);
+    if let Some(profile) = exact_match {
+        return Ok(profile.clone());
+    }
+
+    let prefix_match = profiles
+        .iter()
+        .find(|p| p.to_lowercase().starts_with(&input_lower));
+
+    if let Some(profile) = prefix_match {
+        return Ok(profile.clone());
+    }
+
+    Err(RafctlError::ProfileNotFound(input.to_string()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
