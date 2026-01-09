@@ -77,24 +77,27 @@ Download pre-built binaries from [GitHub Releases](https://github.com/salacoste/
 ## Commands
 
 ```bash
-# Profile management
+# Profile management (supports aliases: w -> work, p -> personal, etc.)
 rafctl profile add <name> --tool <claude|codex>
 rafctl profile add <name> --tool claude --auth-mode api-key
 rafctl profile list
 rafctl profile remove <name>           # Asks for confirmation
 rafctl profile remove <name> --yes     # Skip confirmation
+rafctl profile remove <name> --dry-run # See what would be removed
 rafctl profile show <name>
 
 # Authentication
 rafctl auth login <profile>
 rafctl auth status <profile>
 rafctl auth logout <profile>
+rafctl auth logout <profile> --dry-run  # See what would be cleared
 rafctl auth set-key <profile>   # For API key mode
 
 # Execution
-rafctl run <profile>            # Run tool with profile
+rafctl run <profile>            # Run tool with profile (or alias: rafctl run w)
 rafctl run                      # Run with default/last used profile
 rafctl switch <profile>         # Set as default and show status
+rafctl env <profile>            # Export environment variables for manual use
 
 # Configuration
 rafctl config show              # Show current config
@@ -162,7 +165,7 @@ All data stored in `~/.rafctl/`:
 
 ## Scripting
 
-Use `--json` or `--plain` flags for machine-readable output:
+Use `--json`, `--plain`, or `--verbose` flags for different output modes:
 
 ```bash
 # Get authenticated profiles as JSON
@@ -171,8 +174,49 @@ rafctl status --json | jq '.profiles[] | select(.authenticated == true) | .name'
 # Plain output (no colors, tab-separated)
 rafctl status --plain
 
+# Verbose debug output
+rafctl run work --verbose  # Shows env vars, config paths, auth mode
+
 # Respects NO_COLOR environment variable
 NO_COLOR=1 rafctl status
+```
+
+## Profile Aliases
+
+All commands support profile name aliases for faster typing:
+
+```bash
+# Create profiles
+rafctl profile add work --tool claude
+rafctl profile add personal --tool claude
+
+# Use aliases (prefix match)
+rafctl run w              # Runs 'work'
+rafctl auth login p       # Logs into 'personal'
+rafctl profile show w     # Shows 'work' details
+
+# Exact matches take precedence
+rafctl profile add w --tool claude  # Creates profile literally named 'w'
+rafctl run w              # Now runs 'w', not 'work'
+```
+
+## Shell Environment Export
+
+Export rafctl environment variables for manual tool invocation:
+
+```bash
+# Export environment for a profile
+eval $(rafctl env work)
+
+# Now you can run the tool directly
+claude  # Will use work profile's config
+
+# Check what would be exported
+rafctl env work
+# export CLAUDE_CONFIG_DIR="/Users/you/.rafctl/profiles/work/claude"
+# export RAFCTL_PROFILE="work"
+# export RAFCTL_PROFILE_TOOL="claude"
+# export RAFCTL_VERSION="0.6.0"
 ```
 
 ## Troubleshooting
@@ -234,6 +278,8 @@ These names are reserved and cannot be used: `default`, `config`, `cache`, `prof
 - [x] Usage analytics (v0.3.0)
 - [x] Session monitoring (v0.4.0)
 - [x] Native HUD plugin (v0.4.0)
+- [x] Secure keyring storage (v0.5.0)
+- [x] Developer experience improvements (v0.6.0)
 - [ ] Desktop app (Tauri)
 
 ## Documentation

@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-01-09
+
+### Added
+
+- **Developer Experience** (Epic 20)
+  - `--verbose` / `-v` global flag for debug output across all commands
+  - New `cli::debug` module with conditional debug helpers
+  - **Profile aliases** — use `w` instead of `work`, `p` instead of `personal`, etc.
+    - Exact match first, then prefix match
+    - Works with all commands: `run`, `auth`, `profile show/remove`, etc.
+  - `rafctl env <profile>` command for shell environment export
+    - Outputs export statements: `eval $(rafctl env work)`
+    - Exports CLAUDE_CONFIG_DIR, RAFCTL_* variables for manual tool invocation
+  - `--dry-run` flag for `profile remove` and `auth logout`
+    - Shows what would be done without actually doing it
+    - Useful for verification before destructive operations
+
+### Changed
+
+- All profile-related commands now support alias resolution
+- `resolve_profile_name` now uses `resolve_profile_alias` internally
+- Debug output shows config paths, environment variables, auth mode when verbose
+
 ## [0.5.0] - 2026-01-08
 
 ### Security
@@ -162,7 +185,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cross-platform builds (Linux x86_64, macOS x86_64/aarch64)
 - Release workflow with automatic artifact creation
 
-[Unreleased]: https://github.com/salacoste/rafctl/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/salacoste/rafctl/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/salacoste/rafctl/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/salacoste/rafctl/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/salacoste/rafctl/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/salacoste/rafctl/compare/v0.2.0...v0.3.0
