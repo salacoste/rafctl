@@ -256,6 +256,7 @@ fn fetch_usage_for_profile(_profile_name: &str) -> Result<UsageLimits, RafctlErr
     ))
 }
 
+#[cfg(target_os = "macos")]
 fn fetch_usage_from_api(token: &str) -> Result<UsageLimits, RafctlError> {
     let agent = ureq::AgentBuilder::new()
         .timeout(Duration::from_secs(API_TIMEOUT_SECS))
