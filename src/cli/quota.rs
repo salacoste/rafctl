@@ -1,7 +1,8 @@
-use std::time::Duration;
-
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
+
+#[cfg(target_os = "macos")]
+use std::time::Duration;
 
 use super::output::print_json;
 use super::OutputFormat;
