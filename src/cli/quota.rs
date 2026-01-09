@@ -11,7 +11,9 @@ use crate::error::RafctlError;
 #[cfg(target_os = "macos")]
 use crate::tools::keychain;
 
+#[cfg(target_os = "macos")]
 const ANTHROPIC_USAGE_API: &str = "https://api.anthropic.com/api/oauth/usage";
+#[cfg(target_os = "macos")]
 const API_TIMEOUT_SECS: u64 = 30;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

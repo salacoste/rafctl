@@ -11,9 +11,11 @@ use crate::core::constants::{
     ENV_ANTHROPIC_API_KEY, ENV_RAFCTL_PROFILE, ENV_RAFCTL_PROFILE_TOOL, ENV_RAFCTL_VERSION, VERSION,
 };
 use crate::core::credentials::{self, CredentialType};
+#[cfg(target_os = "macos")]
+use crate::core::profile::get_config_dir;
 use crate::core::profile::{
-    get_config_dir, list_profiles, load_profile, profile_exists, resolve_profile_alias,
-    save_profile, AuthMode, Profile, ToolType,
+    list_profiles, load_profile, profile_exists, resolve_profile_alias, save_profile, AuthMode,
+    Profile, ToolType,
 };
 use crate::error::RafctlError;
 use crate::tools::{check_tool_available, is_authenticated};
